@@ -1,0 +1,45 @@
+name: Journal registry diagnostic
+
+on:
+  push:
+    branches: [diagnostics/journal-registry-c2-20261111-1]
+    paths:
+      - .github/workflows/journal-registry-diagnostic.yml
+      - .github/scripts/journal-registry-diagnostic.py
+      - .github/scripts/test-journal-registry-diagnostic.py
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  inspect-and-test-fresh-tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test sanitized capture and publication boundaries
+        run: python3 .github/scripts/test-journal-registry-diagnostic.py
+      - uses: actions/checkout@v4
+        with:
+          ref: a47ac0f27045dfff361eaca481eda3190d5d5590
+          path: candidate
+      - name: Verify frozen source identity
+        shell: bash
+        run: |
+          test "$(git -C candidate rev-parse HEAD)" = a47ac0f27045dfff361eaca481eda3190d5d5590
+          test "$(git -C candidate rev-parse 'HEAD^{tree}')" = 3c4a3f5c2c7b26f7de61eb0205b77fda7d2ac35c
+          test -z "$(git -C candidate status --porcelain)"
+          test "$(sha256sum candidate/journal/Cargo.lock | cut -d' ' -f1)" = d69e38d29ecabd5ae3d62cf2a7c018b292a9e3a40102a0547971bf0d03e34854
+      - name: Inspect exact existing objects and conditionally publish one fresh tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIAGNOSTIC_TAG: diagnostic-c2-${{ github.run_id }}-${{ github.run_attempt }}
+          DIAGNOSTIC_OUTPUT: evidence/registry-diagnostic.json
+        run: python3 .github/scripts/journal-registry-diagnostic.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: journal-registry-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/registry-diagnostic.json
+          if-no-files-found: error

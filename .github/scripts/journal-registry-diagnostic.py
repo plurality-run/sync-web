@@ -40,9 +40,14 @@ class Diagnostic:
         self.actor = actor
         self.tag = tag
         self.bearer = None
+        self.output = None
         self.transport = transport or urllib.request.build_opener(NoRedirect()).open
         self.report = {"candidate": CANDIDATE, "package": PACKAGE, "tag": tag,
                        "operations": [], "objects": {}, "publication": "not-attempted"}
+
+    def record(self):
+        if self.output:
+            self.output.write_text(json.dumps(self.report, indent=2) + "\n")
 
     def clean(self, value):
         text = str(value)
@@ -60,7 +65,7 @@ class Diagnostic:
         url = urllib.parse.urlsplit(value)
         return url.scheme + "://" + (url.hostname or "") + url.path
 
-    def call(self, method, path, *, data=None, content_type=None, auth=False, url=None):
+    def call(self, method, path, *, data=None, content_type=None, auth=False, url=None, resource=None):
         target = url or "https://ghcr.io" + path
         headers = {"User-Agent": "journal-publication-diagnostic", "Accept": ACCEPT}
         if auth:
@@ -72,8 +77,9 @@ class Diagnostic:
         if content_type:
             headers["Content-Type"] = content_type
         request = urllib.request.Request(target, method=method, headers=headers, data=data)
-        row = {"method": method, "resource": path}
+        row = {"method": method, "resource": resource or path}
         self.report["operations"].append(row)
+        self.record()
         try:
             try:
                 response = self.transport(request, timeout=60)
@@ -97,18 +103,20 @@ class Diagnostic:
                                      for e in errors[:5] if isinstance(e, dict)]
                 except (ValueError, AttributeError, TypeError):
                     row["errors"] = "nonstandard-error-body-not-emitted"
+            self.record()
             return status, body, response_headers
         except Exception as error:
             row["transportError"] = type(error).__name__
+            self.record()
             raise
 
-    def run(self):
+    def authenticate(self):
         scope = "repository:" + PACKAGE + ":pull,push"
         query = urllib.parse.urlencode({"service": "ghcr.io", "scope": scope})
         status, body, _ = self.call("GET", "/token", auth=True, url="https://ghcr.io/token?" + query)
         if status != 200:
             self.report["phase"] = "token-exchange-failed"
-            return
+            return False
         grant = json.loads(body)
         self.bearer = grant.get("token") or grant["access_token"]
         self.secrets.append(self.bearer)
@@ -121,6 +129,11 @@ class Diagnostic:
                 for item in claims.get("access", []) if item.get("name") == PACKAGE]
         except (IndexError, ValueError, TypeError):
             self.report["registryTokenAccessClaims"] = "opaque-or-unavailable"
+        return True
+
+    def run(self):
+        if not self.authenticate():
+            return
         objects = {}
         for kind in ["platform", "attestation", "index", "config"]:
             resource = "blobs" if kind == "config" else "manifests"
@@ -177,6 +190,7 @@ def main():
     if output.exists():
         raise SystemExit("Existing diagnostic receipt; do not replay")
     diagnostic = Diagnostic(os.environ["GH_TOKEN"], os.environ["GITHUB_ACTOR"], os.environ["DIAGNOSTIC_TAG"])
+    diagnostic.output = output
     try:
         diagnostic.run()
     except Exception as error:

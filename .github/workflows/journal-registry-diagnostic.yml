@@ -5,21 +5,26 @@ on:
     branches: [diagnostics/journal-registry-c2-20261111-1]
     paths:
       - .github/workflows/journal-registry-diagnostic.yml
-      - .github/scripts/journal-registry-diagnostic.py
-      - .github/scripts/test-journal-registry-diagnostic.py
+      - .github/scripts/journal-registry-*.py
+      - .github/scripts/test-journal-registry-*.py
 
 permissions:
   contents: read
   packages: write
+  actions: read
 
 jobs:
-  inspect-and-test-fresh-tag:
+  build-and-capture-fresh-graph:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 60
+    env:
+      DIAGNOSTIC_TAG: diagnostic-c2-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
       - name: Test sanitized capture and publication boundaries
-        run: python3 .github/scripts/test-journal-registry-diagnostic.py
+        run: |
+          python3 .github/scripts/test-journal-registry-diagnostic.py
+          python3 .github/scripts/test-journal-registry-upload.py
       - uses: actions/checkout@v4
         with:
           ref: a47ac0f27045dfff361eaca481eda3190d5d5590
@@ -31,15 +36,34 @@ jobs:
           test "$(git -C candidate rev-parse 'HEAD^{tree}')" = 3c4a3f5c2c7b26f7de61eb0205b77fda7d2ac35c
           test -z "$(git -C candidate status --porcelain)"
           test "$(sha256sum candidate/journal/Cargo.lock | cut -d' ' -f1)" = d69e38d29ecabd5ae3d62cf2a7c018b292a9e3a40102a0547971bf0d03e34854
-      - name: Inspect exact existing objects and conditionally publish one fresh tag
+      - uses: actions/download-artifact@v4
+        with:
+          name: ledger-qualified-wasmer-kernel
+          run-id: 43102633269
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: candidate/target/qualified-kernel
+      - name: Build canonical exact-C2 image with existing qualified AOT
+        env:
+          CONTAINER_RUNTIME: docker
+        run: |
+          cd candidate
+          journal/scripts/check-wasmer-kernel-provenance.py target/qualified-kernel a47ac0f27045dfff361eaca481eda3190d5d5590
+          test "$(sha256sum target/qualified-kernel/kernel.wasmer | cut -d' ' -f1)" = 0c6b7fb7f94e1465e96617c28ebe6e216b4a71687062c8ca283bf4a10ad7416f
+          journal/scripts/build-journal-image --variant musl \
+            --kernel target/qualified-kernel/kernel.wasmer \
+            --tag "ghcr.io/plurality-run/sync-web/journal-sdk:$DIAGNOSTIC_TAG" \
+            --evidence-dir "$GITHUB_WORKSPACE/evidence/build"
+          docker image save -o "$RUNNER_TEMP/journal-diagnostic.tar" \
+            "ghcr.io/plurality-run/sync-web/journal-sdk:$DIAGNOSTIC_TAG"
+      - name: Verify complete attested graph and capture registry operations
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DIAGNOSTIC_TAG: diagnostic-c2-${{ github.run_id }}-${{ github.run_attempt }}
-          DIAGNOSTIC_OUTPUT: evidence/registry-diagnostic.json
-        run: python3 .github/scripts/journal-registry-diagnostic.py
+          DIAGNOSTIC_ARCHIVE: ${{ runner.temp }}/journal-diagnostic.tar
+          DIAGNOSTIC_OUTPUT: evidence/registry-upload.json
+        run: python3 .github/scripts/journal-registry-upload.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: journal-registry-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
-          path: evidence/registry-diagnostic.json
+          path: evidence/
           if-no-files-found: error

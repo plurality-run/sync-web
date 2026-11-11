@@ -1,7 +1,7 @@
 {
   "name": "sync-web-info",
   "private": true,
-  "version": "1.6.2",
+  "version": "0.1.0",
   "description": "Synchronic Web documentation site (Astro + Starlight).",
   "scripts": {
     "dev": "astro dev",

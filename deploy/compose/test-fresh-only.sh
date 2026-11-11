@@ -115,7 +115,18 @@ MOCK
         exit 1
     fi
 
-    # Supported 1.5.0/1.6.0/1.6.1 -> 1.6.2 transitions require the explicit update
+    # The new distribution number does not implicitly admit or relabel a
+    # Sandia 1.6.2 volume, even with the explicit update switch.
+    printf '1.6.2\n' > "$work/database/.sync-web-version"
+    for update in 0 1; do
+        if run "$update" > /dev/null 2>&1; then
+            echo "FAIL: Sandia 1.6.2 database relabeled for $runner" >&2
+            exit 1
+        fi
+        test "$(cat "$work/database/.sync-web-version")" = 1.6.2
+    done
+
+    # Supported Sandia 1.5.0/1.6.0/1.6.1 -> Plurality transitions require the explicit update
     # switch and advance the marker only after exact installer success.
     printf '1.5.0\n' > "$work/database/.sync-web-version"
     if run 0 > /dev/null 2>&1; then

@@ -24,7 +24,7 @@ const pagesBasePath = (() => {
 })();
 
 export default defineConfig({
-  site: pagesUrl ?? "https://sandialabs.github.io",
+  site: pagesUrl ?? "https://plurality-run.github.io",
   base: isGitHubActions
     ? pagesBasePath || (repoName ? normalizeBase(`/${repoName}`) : "/")
     : "/",

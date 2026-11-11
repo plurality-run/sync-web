@@ -6,7 +6,7 @@ import urllib.request
 
 
 def install(version, destination):
-    base = f"https://github.com/sandialabs/sync-web/releases/download/ledger-v{version}"
+    base = f"https://github.com/plurality-run/sync-web/releases/download/ledger-v{version}"
     with urllib.request.urlopen(f"{base}/SHA256SUMS", timeout=60) as response:
         checksums = dict((name.lstrip('*'), digest) for digest, name in
                          (line.split() for line in response.read().decode().splitlines()))

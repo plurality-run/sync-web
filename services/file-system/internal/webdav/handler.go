@@ -15,8 +15,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/sandialabs/sync-web/services/file-system/internal/gateway"
-	"github.com/sandialabs/sync-web/services/file-system/internal/paths"
+	"github.com/plurality-run/sync-web/services/file-system/internal/gateway"
+	"github.com/plurality-run/sync-web/services/file-system/internal/paths"
 )
 
 type Handler struct {

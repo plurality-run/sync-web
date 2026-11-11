@@ -36,7 +36,7 @@ class DemoTests(unittest.TestCase):
         self.assertNotIn("443", (ROOT / "router.conf").read_text())
         self.assertIn("absolute_redirect off;", (ROOT / "router.conf").read_text())
         self.assertNotIn("TLS", json.dumps(document))
-        self.assertEqual(document["services"]["journal"]["environment"]["SYNC_WEB_VERSION"], "1.6.2")
+        self.assertEqual(document["services"]["journal"]["environment"]["SYNC_WEB_VERSION"], "0.1.0")
         self.assertEqual(document["services"]["messenger"]["environment"]["MESSENGER_PORT"], "${MESSENGER_PORT:-8280}")
         self.assertEqual(document["services"]["messenger"]["ports"], ["127.0.0.1:${MESSENGER_PORT:-8280}:${MESSENGER_PORT:-8280}"])
         self.assertEqual(document["services"]["explorer"]["environment"]["SYNC_EXPLORER_ENDPOINT"], "/api/v1")

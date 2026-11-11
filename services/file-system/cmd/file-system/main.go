@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/sandialabs/sync-web/services/file-system/internal/config"
-	"github.com/sandialabs/sync-web/services/file-system/internal/gateway"
-	"github.com/sandialabs/sync-web/services/file-system/internal/webdav"
+	"github.com/plurality-run/sync-web/services/file-system/internal/config"
+	"github.com/plurality-run/sync-web/services/file-system/internal/gateway"
+	"github.com/plurality-run/sync-web/services/file-system/internal/webdav"
 )
 
 func main() {

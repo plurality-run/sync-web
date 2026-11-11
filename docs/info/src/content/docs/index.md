@@ -47,7 +47,7 @@ This section links to the primary repositories and live endpoints that developer
 
 ### Source Repository
 
-All components live in [sandialabs/sync-web](https://github.com/sandialabs/sync-web):
+All components live in [sandialabs/sync-web](https://github.com/plurality-run/sync-web):
 
 | Directory | Description |
 |---|---|

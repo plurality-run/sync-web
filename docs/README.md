@@ -4,13 +4,13 @@ The Synchronic Web is a global infrastructure for data assurance, enabling anyon
 
 At its core, the Synchronic Web is powered by distributed programs called journals, which maintain immutable, version-controlled logs (records) and continuously synchronize cryptographic metadata with other journals to achieve global consensus.
 
-Please see the full [documentation](https://sandialabs.github.io/sync-web/) for more details.
+Please see the full [documentation](https://plurality-run.github.io/sync-web/) for more details.
 
 ---
 
 ## Repository Contents
 
-Everything lives in [sandialabs/sync-web](https://github.com/sandialabs/sync-web):
+Everything lives in [sandialabs/sync-web](https://github.com/plurality-run/sync-web):
 
 | Directory | Description |
 |---|---|

@@ -271,7 +271,7 @@ def make_social_agent_service(
     service_name = f"social-agent-{node_index}"
     image = os.environ.get(
         "IMAGE_OVERRIDE_SOCIAL_AGENT",
-        f"ghcr.io/sandialabs/sync-web/social-agent:{SOCIAL_AGENT_VERSION}",
+        f"ghcr.io/plurality-run/sync-web/social-agent:{SOCIAL_AGENT_VERSION}",
     )
     environment = {
         "NODE_NAME": logical_node_name(node_index),

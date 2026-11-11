@@ -1,7 +1,7 @@
 FROM docker.io/library/node:24-alpine3.23
 
 ARG PI_VERSION=0.87.1
-ARG SYNC_WEB_VERSION=1.6.2
+ARG SYNC_WEB_VERSION=0.1.0
 RUN apk add --no-cache bash ca-certificates curl git python3 py3-pip libgcc libstdc++ openssl sqlite-libs \
     && npm install --global --ignore-scripts @earendil-works/pi-coding-agent@${PI_VERSION} \
     && mkdir -p /home/demo && chown node:node /home/demo

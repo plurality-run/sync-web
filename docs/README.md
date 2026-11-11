@@ -10,7 +10,7 @@ Please see the full [documentation](https://plurality-run.github.io/sync-web/) f
 
 ## Repository Contents
 
-Everything lives in [sandialabs/sync-web](https://github.com/plurality-run/sync-web):
+Everything lives in [plurality-run/sync-web](https://github.com/plurality-run/sync-web):
 
 | Directory | Description |
 |---|---|

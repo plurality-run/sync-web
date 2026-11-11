@@ -96,20 +96,39 @@ an exact owner-operated setting or missing capability rather than guessing that
 an inaccessible response means an empty configuration. Keep setting changes
 reversible and separate from final release acceptance.
 
-## External Firewheel exceptions
+## Unresolved legacy Firewheel hosting
 
-The legacy Firewheel installers are not the modern generated Compose producer
-chain. They explicitly retain two external Sandia dependencies:
+The advertised legacy Firewheel adapters remain supported consumers in this
+port's hosting inventory, not archival code or owner-approved exclusions. They
+consume older external dependencies, not the modern generated Compose chain:
 
 - `tests/network/firewheel/model-components/general-journal/INSTALL` clones
   `sandialabs/sync-services`, a different repository.
 - `tests/network/firewheel/model-components/social-agent/INSTALL` pulls
-  `ghcr.io/sandialabs/sync-analysis/social-agent` using its own `version.txt`.
+  `ghcr.io/sandialabs/sync-analysis/social-agent` using a component-local
+  `version.txt` that is not checked into this repository.
 
-No equivalent Plurality repository/image or compatibility has been established
-for these dependencies. They remain surfaced unresolved exceptions, not silently
-renamed artifacts or qualified Plurality hosting. Modernizing or replacing them
-requires an explicit disposition before claiming complete Firewheel portability.
+These baseline adapters already contain stale integration inputs. The general
+installer requests `deploy/compose/general/compose.yaml`, whereas the inspected
+external source at `5b1a7a0d0365f8d6aadaa9239b14a2754f7f0978` provides
+`compose/general/docker-compose.yml` and the older general `1.2.3` image. That
+Compose supports `PORT` and has no identity-provider service. The external
+social-agent source at `ffafe350ed781ced47f1e31454340181e12c10c9` uses
+`SECRET` / `x-sync-auth`, not the current monorepo agent's IdP login flow.
+These observations identify pre-existing adapter/runtime differences; they do
+not establish a working legacy installation or its exact deployed image.
+
+Organization/hosting renaming does not itself require Kratos admin-port exposure
+or a different network topology. Replacing these dependencies with the current
+monorepo runtime is a separate adaptation, not part of this correction. No such
+replacement, credential-policy change or topology change is made here.
+
+Like-for-like Plurality hosting and the stale integration inputs still need an
+explicit disposition before claiming complete Firewheel portability. No
+equivalent Plurality repository/image, image copying or compatibility has been
+established or authorized by this source port. The existing external references
+remain unchanged; they are not qualified Plurality artifacts or silently
+accepted hosting exceptions.
 
 ## Existing database and rollback boundary
 

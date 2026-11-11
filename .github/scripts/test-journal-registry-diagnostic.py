@@ -73,12 +73,18 @@ class DiagnosticTests(unittest.TestCase):
 
     def test_put_denied_is_sanitized_and_not_retried(self):
         diagnostic, calls = self.run_case(put_status=403)
-        self.assertEqual(diagnostic.report["publication"], "not-accepted")
+        self.assertEqual(diagnostic.report["publication"], "unconfirmed")
         output = json.dumps(diagnostic.report)
         for value in ["ghs_job-secret", "registry-private-token", "signed-secret", "Authorization", "private-value"]:
             self.assertNotIn(value, output)
         self.assertEqual(sum(r.method == "PUT" for r in calls), 1)
         self.assertEqual(diagnostic.report["operations"][-1]["errors"][0]["code"], "DENIED")
+
+    def test_server_error_keeps_mutation_unconfirmed(self):
+        diagnostic, calls = self.run_case(put_status=503)
+        self.assertEqual(diagnostic.report["publication"], "unconfirmed")
+        self.assertEqual(diagnostic.report["operations"][-1]["status"], 503)
+        self.assertEqual(sum(r.method == "PUT" for r in calls), 1)
 
     def test_corrupt_digest_fails_before_put(self):
         diagnostic, digests, calls = self.create(corrupt="platform")

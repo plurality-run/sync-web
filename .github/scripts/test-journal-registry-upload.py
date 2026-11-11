@@ -108,10 +108,40 @@ class UploadTests(unittest.TestCase):
             path = Path(directory)/"image.tar"
             self.graph(path)
             upload, calls = self.run_upload(path, reject=403)
-            self.assertEqual(upload.report["phase"], "child-manifest-rejected")
+            self.assertEqual(upload.report["phase"], "child-manifest-not-confirmed")
             self.assertEqual(sum(c.method == "PUT" for c in calls), 1)
             self.assertNotIn("registry-secret", json.dumps(upload.report))
             self.assertEqual(upload.report["operations"][-1]["status"], 403)
+
+    def test_session_path_and_query_redacted_in_error_and_headers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/"image.tar"
+            self.graph(path)
+            location = "https://ghcr.io/v2/" + module.base.PACKAGE + "/blobs/uploads/INERT-PRIVATE-SESSION-CANARY?state=INERT-QUERY-CANARY"
+            def transport(request, timeout=60):
+                if "/token?" in request.full_url:
+                    return Response(200, b'{"token":"registry-secret"}')
+                if request.method == "HEAD":
+                    return Response(404)
+                if request.method == "POST":
+                    return Response(202, headers={"Location": location, "X-GitHub-Request-Id": location})
+                return Response(403, json.dumps({"errors": [{"code": "DENIED", "message": location}]}).encode(),
+                                {"X-Request-Id": "INERT-PRIVATE-SESSION-CANARY"})
+            upload = module.Upload("ghs_job-secret", "actor", "diagnostic-c2-123-1", transport)
+            upload.run_archive(path)
+            output = json.dumps(upload.report)
+            self.assertNotIn("INERT-PRIVATE-SESSION-CANARY", output)
+            self.assertNotIn("INERT-QUERY-CANARY", output)
+            self.assertEqual(upload.report["operations"][-1]["status"], 403)
+
+    def test_manifest_server_error_stays_unconfirmed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/"image.tar"
+            self.graph(path)
+            upload, calls = self.run_upload(path, reject=503)
+            self.assertEqual(upload.report["publication"], "unconfirmed")
+            self.assertEqual(upload.report["operations"][-1]["status"], 503)
+            self.assertEqual(sum(c.method == "PUT" for c in calls), 1)
 
     def test_ambiguous_mutation_checkpointed_without_retry(self):
         with tempfile.TemporaryDirectory() as directory:

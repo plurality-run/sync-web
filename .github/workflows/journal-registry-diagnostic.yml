@@ -55,6 +55,12 @@ jobs:
             --evidence-dir "$GITHUB_WORKSPACE/evidence/build"
           docker image save -o "$RUNNER_TEMP/journal-diagnostic.tar" \
             "ghcr.io/plurality-run/sync-web/journal-sdk:$DIAGNOSTIC_TAG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: journal-registry-oci-archive-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/journal-diagnostic.tar
+          if-no-files-found: error
+          compression-level: 0
       - name: Verify complete attested graph and capture registry operations
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

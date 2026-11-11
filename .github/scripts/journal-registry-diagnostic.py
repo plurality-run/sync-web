@@ -60,10 +60,22 @@ class Diagnostic:
         text = re.sub(r"https?://[^\s\"<>]+", lambda m: self.safe_url(m[0]), text)
         return text[:500]
 
+    def redact_location(self, value):
+        self.secrets.extend([value, urllib.parse.unquote(value)])
+        parsed = urllib.parse.urlsplit(value)
+        self.secrets.extend(v for _, v in urllib.parse.parse_qsl(parsed.query) if v)
+        if "/blobs/uploads/" in parsed.path:
+            tail = parsed.path.split("/blobs/uploads/", 1)[1]
+            self.secrets.extend(v for v in [parsed.path, tail, urllib.parse.unquote(tail)] if v)
+            self.secrets.extend(v for v in urllib.parse.unquote(tail).split("/") if v)
+
     @staticmethod
     def safe_url(value):
         url = urllib.parse.urlsplit(value)
-        return url.scheme + "://" + (url.hostname or "") + url.path
+        path = url.path
+        if "/blobs/uploads/" in path:
+            path = path.split("/blobs/uploads/", 1)[0] + "/blobs/uploads/<session>"
+        return url.scheme + "://" + (url.hostname or "") + path
 
     def call(self, method, path, *, data=None, content_type=None, auth=False, url=None, resource=None):
         target = url or "https://ghcr.io" + path
@@ -92,6 +104,9 @@ class Diagnostic:
             row["status"] = status
             if len(body) > 1024 * 1024:
                 raise ValueError("Response exceeded diagnostic bound")
+            # Learn opaque session identifiers before serializing echoed headers or errors.
+            if response_headers.get("Location"):
+                self.redact_location(response_headers["Location"])
             row["headers"] = {name: self.clean(response_headers[name]) for name in
                               ["Content-Type", "Docker-Content-Digest", "X-GitHub-Request-Id", "X-Request-Id"]
                               if response_headers.get(name)}
@@ -180,8 +195,8 @@ class Diagnostic:
         self.report["publication"] = "attempting-one-fresh-tag"
         status, _, _ = self.call("PUT", "/v2/" + PACKAGE + "/manifests/" + self.tag,
                                  data=objects["index"][1], content_type=index["mediaType"])
-        self.report["publication"] = "accepted" if status == 201 else "not-accepted"
-        self.report["phase"] = "fresh-tag-put-complete-no-retry"
+        self.report["publication"] = "accepted" if status == 201 else "unconfirmed"
+        self.report["phase"] = "fresh-tag-http-response-no-retry"
 
 
 def main():

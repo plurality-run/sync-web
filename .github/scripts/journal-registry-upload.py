@@ -105,7 +105,8 @@ class Upload(base.Diagnostic):
             self.report["publication"] = "uploading-fresh-graph-blobs"
             status, _, headers = self.call("POST", prefix + "/blobs/uploads/", data=b"")
             if status != 202:
-                self.report["phase"] = "blob-upload-start-rejected"
+                self.report["publication"] = "unconfirmed"
+                self.report["phase"] = "blob-upload-start-not-confirmed"
                 return
             location = urllib.parse.urlsplit(urllib.parse.urljoin("https://ghcr.io", headers.get("Location", "")))
             if location.scheme != "https" or location.netloc != "ghcr.io" or not location.path.startswith(prefix + "/blobs/uploads/"):
@@ -118,7 +119,8 @@ class Upload(base.Diagnostic):
             status, _, _ = self.call("PUT", path, data=data, content_type="application/octet-stream",
                                      resource=prefix + "/blobs/uploads/<session>?digest=" + key)
             if status != 201:
-                self.report["phase"] = "blob-upload-completion-rejected"
+                self.report["publication"] = "unconfirmed"
+                self.report["phase"] = "blob-upload-completion-not-confirmed"
                 return
         # Preserve the attestation and capture the runnable-manifest operation separately.
         for descriptor in reversed(manifests):
@@ -126,14 +128,15 @@ class Upload(base.Diagnostic):
             status, _, _ = self.call("PUT", prefix + "/manifests/" + descriptor["digest"],
                                      data=blobs[descriptor["digest"]], content_type=descriptor["mediaType"])
             if status != 201:
-                self.report["phase"] = "child-manifest-rejected"
-                self.report["rejectedManifestDigest"] = descriptor["digest"]
+                self.report["publication"] = "unconfirmed"
+                self.report["phase"] = "child-manifest-not-confirmed"
+                self.report["unconfirmedManifestDigest"] = descriptor["digest"]
                 return
         self.report["publication"] = "attempting-one-fresh-tag"
         status, _, _ = self.call("PUT", prefix + "/manifests/" + self.tag, data=root,
                                  content_type=json.loads(root)["mediaType"])
-        self.report["publication"] = "accepted" if status == 201 else "not-accepted"
-        self.report["phase"] = "fresh-tag-put-complete-no-retry"
+        self.report["publication"] = "accepted" if status == 201 else "unconfirmed"
+        self.report["phase"] = "fresh-tag-http-response-no-retry"
 
 
 def main():

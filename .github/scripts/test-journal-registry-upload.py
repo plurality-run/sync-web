@@ -113,6 +113,30 @@ class UploadTests(unittest.TestCase):
             self.assertNotIn("registry-secret", json.dumps(upload.report))
             self.assertEqual(upload.report["operations"][-1]["status"], 403)
 
+    def test_location_probe_static_flags_and_no_put(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/"image.tar"
+            self.graph(path)
+            for origin in ["https://ghcr.io", "https://untrusted.invalid"]:
+                location = origin + "/v2/" + module.base.PACKAGE + "/blobs/upload/INERT-PRIVATE-SESSION-CANARY?state=INERT-QUERY-CANARY"
+                calls = []
+                def transport(request, timeout=60):
+                    calls.append(request)
+                    if "/token?" in request.full_url:
+                        return Response(200, b'{"token":"registry-secret"}')
+                    if request.method == "HEAD":
+                        return Response(404)
+                    return Response(202, headers={"Location": location, "X-Request-Id": location})
+                upload = module.Upload("ghs_job-secret", "actor", "diagnostic-c2-123-1", transport)
+                upload.run_archive(path, probe_only=True)
+                self.assertEqual(upload.report["phase"], "location-shape-probe-complete-no-put")
+                self.assertEqual(upload.report["uploadLocationValidation"]["sameRegistryOrigin"], origin == "https://ghcr.io")
+                self.assertTrue(upload.report["uploadLocationValidation"]["singularUploadPrefix"])
+                self.assertFalse(any(c.method == "PUT" or c.full_url.startswith("https://untrusted.invalid") for c in calls))
+                self.assertEqual(sum(c.method == "POST" for c in calls), 1)
+                self.assertNotIn("INERT-PRIVATE-SESSION-CANARY", json.dumps(upload.report))
+                self.assertNotIn("INERT-QUERY-CANARY", json.dumps(upload.report))
+
     def test_session_path_and_query_redacted_in_error_and_headers(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)/"image.tar"

@@ -64,18 +64,16 @@ class Diagnostic:
         self.secrets.extend([value, urllib.parse.unquote(value)])
         parsed = urllib.parse.urlsplit(value)
         self.secrets.extend(v for _, v in urllib.parse.parse_qsl(parsed.query) if v)
-        if "/blobs/uploads/" in parsed.path:
-            tail = parsed.path.split("/blobs/uploads/", 1)[1]
-            self.secrets.extend(v for v in [parsed.path, tail, urllib.parse.unquote(tail)] if v)
+        self.secrets.extend(v for v in [parsed.path, urllib.parse.unquote(parsed.path),
+                                        urllib.parse.unquote(parsed.path).rsplit("/", 1)[-1]] if v)
+        if "/blobs/" in parsed.path:
+            tail = parsed.path.split("/blobs/", 1)[1]
+            self.secrets.extend(v for v in [tail, urllib.parse.unquote(tail)] if v)
             self.secrets.extend(v for v in urllib.parse.unquote(tail).split("/") if v)
 
     @staticmethod
     def safe_url(value):
-        url = urllib.parse.urlsplit(value)
-        path = url.path
-        if "/blobs/uploads/" in path:
-            path = path.split("/blobs/uploads/", 1)[0] + "/blobs/uploads/<session>"
-        return url.scheme + "://" + (url.hostname or "") + path
+        return "[URL-REDACTED]"
 
     def call(self, method, path, *, data=None, content_type=None, auth=False, url=None, resource=None):
         target = url or "https://ghcr.io" + path

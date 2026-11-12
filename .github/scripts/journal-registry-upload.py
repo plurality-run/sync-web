@@ -87,7 +87,7 @@ def read_graph(path):
 
 
 class Upload(base.Diagnostic):
-    def run_archive(self, path):
+    def run_archive(self, path, *, probe_only=False):
         root, manifests, required, blobs = read_graph(path)
         self.report["graph"] = {"indexDigest": digest(root), "platformDigest": manifests[0]["digest"],
                                 "attestationDigest": manifests[1]["digest"], "blobCount": len(required),
@@ -109,6 +109,20 @@ class Upload(base.Diagnostic):
                 self.report["phase"] = "blob-upload-start-not-confirmed"
                 return
             location = urllib.parse.urlsplit(urllib.parse.urljoin("https://ghcr.io", headers.get("Location", "")))
+            self.report["uploadLocationValidation"] = {
+                "https": location.scheme == "https",
+                "sameRegistryOrigin": location.netloc == "ghcr.io",
+                "expectedUploadPrefix": location.path.startswith(prefix + "/blobs/uploads/"),
+                "singularUploadPrefix": location.path.startswith(prefix + "/blobs/upload/"),
+                "expectedPackagePrefix": location.path.startswith(prefix + "/"),
+                "registryV2Prefix": location.path.startswith("/v2/"),
+                "queryPresent": bool(location.query),
+                "digestQueryPresent": any(k == "digest" for k, _ in urllib.parse.parse_qsl(location.query)),
+            }
+            if probe_only:
+                self.report["publication"] = "session-start-acknowledged-no-content-puts"
+                self.report["phase"] = "location-shape-probe-complete-no-put"
+                return
             if location.scheme != "https" or location.netloc != "ghcr.io" or not location.path.startswith(prefix + "/blobs/uploads/"):
                 raise ValueError("Unexpected upload location")
             query = urllib.parse.parse_qsl(location.query, keep_blank_values=True)
@@ -147,7 +161,8 @@ def main():
     diagnostic = Upload(os.environ["GH_TOKEN"], os.environ["GITHUB_ACTOR"], os.environ["DIAGNOSTIC_TAG"])
     diagnostic.output = output
     try:
-        diagnostic.run_archive(os.environ["DIAGNOSTIC_ARCHIVE"])
+        diagnostic.run_archive(os.environ["DIAGNOSTIC_ARCHIVE"],
+                               probe_only=os.environ.get("DIAGNOSTIC_LOCATION_PROBE") == "1")
     except Exception as error:
         diagnostic.report["errorType"] = type(error).__name__
     finally:

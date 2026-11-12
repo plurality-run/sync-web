@@ -14,9 +14,9 @@ permissions:
   actions: read
 
 jobs:
-  build-and-capture-fresh-graph:
+  classify-upload-location-no-content-put:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
     env:
       DIAGNOSTIC_TAG: diagnostic-c2-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
@@ -25,51 +25,25 @@ jobs:
         run: |
           python3 .github/scripts/test-journal-registry-diagnostic.py
           python3 .github/scripts/test-journal-registry-upload.py
-      - uses: actions/checkout@v4
-        with:
-          ref: a47ac0f27045dfff361eaca481eda3190d5d5590
-          path: candidate
-      - name: Verify frozen source identity
-        shell: bash
-        run: |
-          test "$(git -C candidate rev-parse HEAD)" = a47ac0f27045dfff361eaca481eda3190d5d5590
-          test "$(git -C candidate rev-parse 'HEAD^{tree}')" = 3c4a3f5c2c7b26f7de61eb0205b77fda7d2ac35c
-          test -z "$(git -C candidate status --porcelain)"
-          test "$(sha256sum candidate/journal/Cargo.lock | cut -d' ' -f1)" = d69e38d29ecabd5ae3d62cf2a7c018b292a9e3a40102a0547971bf0d03e34854
       - uses: actions/download-artifact@v4
         with:
-          name: ledger-qualified-wasmer-kernel
-          run-id: 43102633269
+          name: journal-registry-oci-archive-43122208660-1
+          run-id: 43122208660
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: candidate/target/qualified-kernel
-      - name: Build canonical exact-C2 image with existing qualified AOT
-        env:
-          CONTAINER_RUNTIME: docker
+          path: retained-image
+      - name: Verify exact retained canonical C2 archive
         run: |
-          cd candidate
-          journal/scripts/check-wasmer-kernel-provenance.py target/qualified-kernel a47ac0f27045dfff361eaca481eda3190d5d5590
-          test "$(sha256sum target/qualified-kernel/kernel.wasmer | cut -d' ' -f1)" = 0c6b7fb7f94e1465e96617c28ebe6e216b4a71687062c8ca283bf4a10ad7416f
-          journal/scripts/build-journal-image --variant musl \
-            --kernel target/qualified-kernel/kernel.wasmer \
-            --tag "ghcr.io/plurality-run/sync-web/journal-sdk:$DIAGNOSTIC_TAG" \
-            --evidence-dir "$GITHUB_WORKSPACE/evidence/build"
-          docker image save -o "$RUNNER_TEMP/journal-diagnostic.tar" \
-            "ghcr.io/plurality-run/sync-web/journal-sdk:$DIAGNOSTIC_TAG"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: journal-registry-oci-archive-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/journal-diagnostic.tar
-          if-no-files-found: error
-          compression-level: 0
-      - name: Verify complete attested graph and capture registry operations
+          test "$(sha256sum retained-image/journal-diagnostic.tar | cut -d' ' -f1)" = 00c814293cd992bc4766be8781abb4d817d1c61e9a1eafa23ede51eb8c656e8c
+      - name: Classify fresh upload location without any content PUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DIAGNOSTIC_ARCHIVE: ${{ runner.temp }}/journal-diagnostic.tar
-          DIAGNOSTIC_OUTPUT: evidence/registry-upload.json
+          DIAGNOSTIC_ARCHIVE: retained-image/journal-diagnostic.tar
+          DIAGNOSTIC_OUTPUT: evidence/registry-location-probe.json
+          DIAGNOSTIC_LOCATION_PROBE: '1'
         run: python3 .github/scripts/journal-registry-upload.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: journal-registry-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          name: journal-registry-location-probe-${{ github.run_id }}-${{ github.run_attempt }}
           path: evidence/
           if-no-files-found: error

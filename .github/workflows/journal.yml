@@ -10,10 +10,10 @@ on:
   workflow_dispatch:
   push:
     branches: ["**"]
-    paths: ["journal/**", "records/**", "deploy/**", "VERSION", ".github/workflows/journal.yml", ".github/scripts/promote-image.sh", ".github/scripts/check-platform-release.sh", ".github/scripts/test-platform-release.py", ".github/workflows/platform-release.yml"]
+    paths: ["journal/**", "records/**", "deploy/**", "VERSION", ".github/workflows/journal.yml", ".github/scripts/promote-image.sh", ".github/scripts/check-platform-release.sh", ".github/scripts/check-platform-release-version.py", ".github/scripts/test-platform-release.py", ".github/workflows/platform-release.yml"]
   pull_request:
     branches: ["main"]
-    paths: ["journal/**", "records/**", "deploy/**", "VERSION", ".github/workflows/journal.yml", ".github/scripts/promote-image.sh", ".github/scripts/check-platform-release.sh", ".github/scripts/test-platform-release.py", ".github/workflows/platform-release.yml"]
+    paths: ["journal/**", "records/**", "deploy/**", "VERSION", ".github/workflows/journal.yml", ".github/scripts/promote-image.sh", ".github/scripts/check-platform-release.sh", ".github/scripts/check-platform-release-version.py", ".github/scripts/test-platform-release.py", ".github/workflows/platform-release.yml"]
 
 concurrency:
   group: "journal-compose-${{ github.ref }}-${{ inputs.release && 'release' || 'ci' }}"

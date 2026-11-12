@@ -168,16 +168,8 @@ jobs:
       - name: Check release provenance
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ledger-v${{ needs.metadata.outputs.version }}
-        run: |
-          set -euo pipefail
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq '.object.sha')"
-            if [ "$tag_sha" != "$GITHUB_SHA" ]; then
-              echo "Release $RELEASE_TAG already points at $tag_sha, not this commit $GITHUB_SHA" >&2
-              exit 1
-            fi
-          fi
+          SELECTED_VERSION: ${{ needs.metadata.outputs.version }}
+        run: python3 .github/scripts/check-platform-release-version.py "$GITHUB_SHA" "$SELECTED_VERSION"
 
       - name: Generate checksums
         working-directory: release-artifacts

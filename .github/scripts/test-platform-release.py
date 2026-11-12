@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Offline release-event/source guards; no registry, dispatch or release writes."""
+import importlib.util
 import os
 from pathlib import Path
 import re
@@ -7,9 +8,14 @@ import subprocess
 import tempfile
 import textwrap
 import unittest
+from unittest.mock import Mock, patch
+import urllib.error
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / '.github/workflows'
+SPEC = importlib.util.spec_from_file_location('release_version', ROOT / '.github/scripts/check-platform-release-version.py')
+RELEASE_VERSION = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(RELEASE_VERSION)
 
 
 def expression(text, values):
@@ -129,6 +135,10 @@ class EventGuards(unittest.TestCase):
         self.assertIn('cancel-in-progress: false', source)
         self.assertNotIn('secrets: inherit', source)
         self.assertNotIn('lookup_head_sha', (ROOT / '.github/scripts/promote-image.sh').read_text())
+        approval = source.split('  approve-source:\n')[1].split('\n  journal:')[0]
+        self.assertIn('python3 .github/scripts/check-platform-release-version.py "$SELECTED_COMMIT" "$SELECTED_VERSION"', approval)
+        self.assertNotIn('continue-on-error', approval)
+        self.assertNotIn('always()', source)
 
     def test_social_numbered_tags_are_conditional_but_development_latest_remains(self):
         source = (WORKFLOWS / 'tests-social-agent.yml').read_text()
@@ -178,6 +188,28 @@ class SourceGuards(unittest.TestCase):
         self.assertNotEqual(self.invoke(version='0.2.0').returncode, 0)
         self.assertFalse((self.directory / 'unexpected').exists())
 
+    def test_already_released_A_blocks_later_B_with_unchanged_version_before_producers(self):
+        released = self.sha
+        subprocess.run(['git', 'tag', 'ledger-v0.1.0'], cwd=self.directory, check=True)
+        (self.directory / 'other').write_text('later development\n')
+        subprocess.run(['git', 'add', 'other'], cwd=self.directory, check=True)
+        subprocess.run(['git', '-c', 'user.name=Release fixture', '-c', 'user.email=fixture@example.org',
+                        'commit', '-qm', 'later development'], cwd=self.directory, check=True)
+        self.sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.directory, text=True).strip()
+        self.environment['GITHUB_SHA'] = self.sha
+        self.assertEqual(self.invoke().returncode, 0)
+        self.assertEqual((self.directory / 'VERSION').read_text(), '0.1.0\n')
+        responses = {'/repos/example/project': {'full_name': 'example/project'},
+                     '/repos/example/project/git/ref/tags/ledger-v0.1.0': {'object': {'type': 'commit', 'sha': released}},
+                     '/repos/example/project/releases/tags/ledger-v0.1.0': {'tag_name': 'ledger-v0.1.0'}}
+        producer, promotion = Mock(), Mock()
+        with self.assertRaisesRegex(RELEASE_VERSION.InspectionError, 'already bound'):
+            RELEASE_VERSION.check_published_version(self.sha, '0.1.0', 'example/project', responses.__getitem__)
+            producer()
+            promotion()
+        producer.assert_not_called()
+        promotion.assert_not_called()
+
     def test_social_actual_tag_output_is_latest_only_without_release_intent(self):
         block = named_step((WORKFLOWS / 'tests-social-agent.yml').read_text(), 'Resolve version')
         shell = textwrap.dedent(block.split('        run: |\n', 1)[1])
@@ -210,6 +242,62 @@ class SourceGuards(unittest.TestCase):
         environment['PLATFORM_RELEASE'] = 'false'
         self.assertNotEqual(subprocess.run(command, cwd=self.directory, env=environment, capture_output=True).returncode, 0)
         self.assertFalse(log.exists())
+
+
+class PublishedVersionGuards(unittest.TestCase):
+    def responses(self, tag=None, release=None):
+        return {'/repos/example/project': {'full_name': 'example/project'},
+                '/repos/example/project/git/ref/tags/ledger-v0.1.0': tag,
+                '/repos/example/project/releases/tags/ledger-v0.1.0': release}
+
+    def test_first_release_and_same_source_recovery(self):
+        commit = 'a' * 40
+        for tag, release in [(None, None),
+                             ({'object': {'type': 'commit', 'sha': commit}}, None),
+                             ({'object': {'type': 'commit', 'sha': commit}}, {'tag_name': 'ledger-v0.1.0'})]:
+            RELEASE_VERSION.check_published_version(commit, '0.1.0', 'example/project', self.responses(tag, release).__getitem__)
+
+    def test_tag_alone_from_other_source_also_blocks(self):
+        responses = self.responses({'object': {'type': 'commit', 'sha': 'a' * 40}})
+        with self.assertRaises(RELEASE_VERSION.InspectionError):
+            RELEASE_VERSION.check_published_version('b' * 40, '0.1.0', 'example/project', responses.__getitem__)
+
+    def test_annotated_tags_resolve_to_source_commit(self):
+        responses = self.responses({'object': {'type': 'tag', 'sha': 'c' * 40}}, {'tag_name': 'ledger-v0.1.0'})
+        responses['/repos/example/project/git/tags/' + 'c' * 40] = {'object': {'type': 'commit', 'sha': 'a' * 40}}
+        RELEASE_VERSION.check_published_version('a' * 40, '0.1.0', 'example/project', responses.__getitem__)
+        with self.assertRaises(RELEASE_VERSION.InspectionError):
+            RELEASE_VERSION.check_published_version('b' * 40, '0.1.0', 'example/project', responses.__getitem__)
+
+    def test_unreadable_repository_and_release_without_tag_are_not_fresh(self):
+        for responses in [self.responses(None, {'tag_name': 'ledger-v0.1.0'}),
+                          dict(self.responses(), **{'/repos/example/project': None})]:
+            with self.assertRaises(RELEASE_VERSION.InspectionError):
+                RELEASE_VERSION.check_published_version('a' * 40, '0.1.0', 'example/project', responses.__getitem__)
+
+    def test_only_actual_404_is_absence_not_forbidden_or_server_failure(self):
+        for status in [401, 403, 404, 500, 503]:
+            error = urllib.error.HTTPError('https://api.github.com/fixture', status, 'fixture', {}, None)
+            with patch.object(RELEASE_VERSION.urllib.request, 'build_opener') as opener:
+                opener.return_value.open.side_effect = error
+                if status == 404:
+                    self.assertIsNone(RELEASE_VERSION.read_api('/fixture', 'fixture-token'))
+                else:
+                    with self.assertRaises(RELEASE_VERSION.InspectionError):
+                        RELEASE_VERSION.read_api('/fixture', 'fixture-token')
+
+    def test_transport_read_failure_never_reaches_producers(self):
+        responses = self.responses()
+        for failing_path in list(responses):
+            producer = Mock()
+            def read(path):
+                if path == failing_path:
+                    raise urllib.error.URLError('fixture unavailable')
+                return responses[path]
+            with self.assertRaises(urllib.error.URLError):
+                RELEASE_VERSION.check_published_version('a' * 40, '0.1.0', 'example/project', read)
+                producer()
+            producer.assert_not_called()
 
 
 if __name__ == '__main__':

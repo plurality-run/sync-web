@@ -27,10 +27,12 @@ jobs:
       - name: Check explicit main source and version
         env:
           PLATFORM_RELEASE: 'true'
+          GH_TOKEN: ${{ github.token }}
           SELECTED_COMMIT: ${{ inputs.commit }}
           SELECTED_VERSION: ${{ inputs.version }}
         run: |
           .github/scripts/check-platform-release.sh "$SELECTED_COMMIT" "$SELECTED_VERSION"
+          python3 .github/scripts/check-platform-release-version.py "$SELECTED_COMMIT" "$SELECTED_VERSION"
           node scripts/sync-platform-package-versions.js
 
   journal:

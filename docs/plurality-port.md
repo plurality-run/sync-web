@@ -85,6 +85,18 @@ must equal the committed `VERSION` and synchronized manifests. A branch dispatch
 wrong SHA or version fails before producer jobs. If main moves before dispatch,
 select/review the new main SHA rather than publishing some other source silently.
 
+Before any producer starts, the shared approval also reads the existing
+`ledger-v<VERSION>` tag/release binding. A version already bound to another
+commit is rejected, including later development commits that keep the last
+released `VERSION`. Bump `VERSION` and its synchronized manifests for the next
+release instead of reusing that published version. Annotated tags are resolved
+to their source commit. Only actual tag/release absence after a successful
+repository read is treated as a first release; permission, server and transport
+failures block approval rather than imply absence. A release with no readable
+tag source also blocks approval. Same-source owner-approved recovery remains
+possible, but is not an automatic retry or proof that partial publication was
+rolled back. Ledger retains a later check through the same source-binding helper.
+
 The entry point reuses Journal, Ledger, six service and social-agent workflows
 with explicit `release: true`. All other events, including their individual
 manual CI buttons, default to false. Journal promotion requires successful native,

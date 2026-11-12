@@ -1,0 +1,48 @@
+name: Journal stock Docker push
+on:
+  push:
+    branches: ['diagnostics/journal-stock-docker-20261112-1']
+    paths:
+      - '.github/workflows/journal-stock-docker-push.yml'
+      - '.github/scripts/journal-stock-docker-push.py'
+permissions:
+  contents: read
+  actions: read
+  packages: write
+jobs:
+  stock-docker:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Limit stock engine to one upload attempt
+        run: |
+          sudo python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('/etc/docker/daemon.json')
+          config = json.loads(p.read_text()) if p.exists() else {}
+          config['max-upload-attempts'] = 1
+          p.parent.mkdir(parents=True, exist_ok=True)
+          p.write_text(json.dumps(config) + '\n')
+          PY
+          sudo systemctl restart docker
+      - uses: actions/download-artifact@v4
+        with:
+          name: journal-image-provenance
+          run-id: 43139976462
+          github-token: ${{ github.token }}
+          path: retained
+      - name: Load exact full graph and make one normal Docker push
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/journal-stock-docker-push.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: journal-stock-docker-push-${{ github.run_id }}-${{ github.run_attempt }}
+          path: stock-docker-evidence/*.json
+          if-no-files-found: warn

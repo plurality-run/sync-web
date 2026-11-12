@@ -1,0 +1,43 @@
+name: Journal integrated readback
+
+on:
+  push:
+    branches: ['qualify/journal-integrated-readback-20261112-1']
+    paths:
+      - '.github/workflows/journal-integrated-readback.yml'
+      - '.github/scripts/journal-integrated-readback.py'
+
+permissions:
+  contents: read
+  packages: read
+  actions: read
+
+jobs:
+  readback:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test reviewed read-only tooling
+        run: |
+          python3 .github/scripts/test-journal-registry-diagnostic.py
+          python3 .github/scripts/test-journal-registry-upload.py
+          python3 .github/scripts/test-journal-registry-readback.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: journal-image-provenance
+          run-id: 43139976462
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: retained
+      - name: Read exact current graph and qualify normal Docker consumption
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIAGNOSTIC_ARCHIVE: retained/image.tar
+          DIAGNOSTIC_OUTPUT: evidence/readback.json
+        run: python3 .github/scripts/journal-integrated-readback.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: journal-registry-readback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/
+          if-no-files-found: error

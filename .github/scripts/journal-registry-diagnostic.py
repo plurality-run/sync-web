@@ -50,14 +50,13 @@ class Diagnostic:
             self.output.write_text(json.dumps(self.report, indent=2) + "\n")
 
     def clean(self, value):
-        text = str(value)
+        text = re.sub(r"https?://[^\s\"<>]+", lambda m: self.safe_url(m[0]), str(value))
         for secret in self.secrets:
             if secret:
                 text = text.replace(secret, "[REDACTED]")
         text = re.sub(r"(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)", "[REDACTED]", text)
         text = re.sub(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+", "[REDACTED]", text)
         text = re.sub(r"(?i)(?:Bearer|Basic)\s+[^\s,;]+", "[REDACTED]", text)
-        text = re.sub(r"https?://[^\s\"<>]+", lambda m: self.safe_url(m[0]), text)
         return text[:500]
 
     def redact_location(self, value):

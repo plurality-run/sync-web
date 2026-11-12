@@ -63,7 +63,7 @@ class ReadbackTests(unittest.TestCase):
             self.exercise(redirect="https://untrusted.invalid/blob?sig=private")
         self.assertFalse(any(c.full_url.startswith("https://untrusted.invalid") for c in self.calls))
 
-    def test_normal_docker_smoke_no_push_and_auth_cleanup(self):
+    def test_normal_docker_index_identity_no_push_and_auth_cleanup(self):
         diagnostic = self.exercise()
         directories = []
         commands = []
@@ -75,7 +75,7 @@ class ReadbackTests(unittest.TestCase):
             self.assertNotIn("push", args)
             output = b""
             if args[1:3] == ["image", "inspect"]:
-                output = json.dumps([{"Id": diagnostic.expected_config, "RepoDigests": [image],
+                output = json.dumps([{"Id": module.INDEX, "RepoDigests": [image],
                                       "Os": "linux", "Architecture": "amd64",
                                       "Config": {"Labels": module.upload.EXPECTED_LABELS}}]).encode()
             if "--version" in args:
@@ -86,7 +86,7 @@ class ReadbackTests(unittest.TestCase):
                 self.assertIn("--read-only", args)
                 self.assertIn("--pull=never", args)
                 output = b"3\n"
-                stderr = ("artifact-sha256=" + module.upload.EXPECTED_LABELS["sync-web.aot-sha256"]).encode()
+                stderr = ("wasmer-runtime-attestation evaluator=wasmer-nofuel artifact-sha256=" + module.upload.EXPECTED_LABELS["sync-web.aot-sha256"] + " target=x86_64-linux evaluations=1\n").encode()
             return SimpleNamespace(returncode=0, stdout=output, stderr=stderr)
         with patch.object(module.subprocess, "run", process):
             diagnostic.docker_consumer()
@@ -94,6 +94,15 @@ class ReadbackTests(unittest.TestCase):
         self.assertEqual(sum(c[1] == "pull" for c in commands), 2)
         self.assertEqual(diagnostic.report["normalDocker"]["result"], "authenticated-tag-and-digest-pull-offline-runtime-passed")
         self.assertNotIn("job-secret", json.dumps(diagnostic.report))
+        self.assertEqual(diagnostic.report["normalDocker"]["imageIdRole"], "index")
+        self.assertTrue(diagnostic.report["normalDocker"]["runtimeAttestation"]["matchesExpected"])
+
+    def test_urls_suppressed_before_short_query_value_redaction(self):
+        diagnostic = module.Readback("job-secret", "actor", module.TAG)
+        diagnostic.secrets.extend(["r", "b", "https"])
+        output = diagnostic.clean("https://example.invalid/INERT-PATH?sig=INERT-SIGNED-QUERY")
+        self.assertNotIn("INERT", output)
+        self.assertNotIn("example.invalid", output)
 
     def test_wrong_bytes_fail_closed(self):
         with self.assertRaises(ValueError):

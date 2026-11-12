@@ -35,7 +35,8 @@ class Readback(base.Diagnostic):
         index, manifests, required, blobs = upload.read_graph(path)
         if upload.digest(index) != INDEX:
             raise ValueError("Unexpected retained index")
-        self.expected_config = json.loads(blobs[manifests[0]["digest"]])["config"]["digest"]
+        self.expected_platform = manifests[0]["digest"]
+        self.expected_config = json.loads(blobs[self.expected_platform])["config"]["digest"]
         self.report["publication"] = "read-only-no-mutations"
         self.report["phase"] = "authenticating-read-only"
         if not self.authenticate(pull_only=True):
@@ -56,10 +57,12 @@ class Readback(base.Diagnostic):
         image = "ghcr.io/" + base.PACKAGE
         receipt = self.report["normalDocker"] = {"commands": [], "result": "not-qualified"}
         with tempfile.TemporaryDirectory(prefix="registry-readback-auth-") as config:
+            self.secrets.append(config)
             env = dict(os.environ, DOCKER_CONFIG=config)
             def run(args, *, stdin=None, record_output=True):
                 result = subprocess.run(args, input=stdin, stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, env=env, timeout=90)
+                self.last_stderr = result.stderr.decode(errors="replace")
                 receipt["commands"].append({"args": args, "exit": result.returncode,
                                             "stdout": self.clean(result.stdout.decode(errors="replace")) if record_output else "inspected-fields-projected",
                                             "stderr": self.clean(result.stderr.decode(errors="replace"))})
@@ -72,24 +75,37 @@ class Readback(base.Diagnostic):
                 run(["docker", "pull", image + ":" + TAG])
                 run(["docker", "pull", image + "@" + INDEX])
                 info = json.loads(run(["docker", "image", "inspect", image + "@" + INDEX], record_output=False))[0]
-                if info["Id"] != self.expected_config or image + "@" + INDEX not in info["RepoDigests"]:
-                    raise ValueError("Normal Docker digest mismatch")
+                roles = {INDEX: "index", self.expected_platform: "platform", self.expected_config: "config"}
+                receipt.update({"imageId": info["Id"], "imageIdRole": roles.get(info["Id"], "other"),
+                                "expectedConfig": self.expected_config, "repoDigests": info["RepoDigests"],
+                                "os": info["Os"], "architecture": info["Architecture"],
+                                "labels": {k: info["Config"]["Labels"].get(k) for k in upload.EXPECTED_LABELS}})
+                receipt["guardStage"] = "checking-exact-pulled-index-association"
+                if image + "@" + INDEX not in info["RepoDigests"]:
+                    raise ValueError("Normal Docker index association mismatch")
+                receipt["guardStage"] = "checking-platform"
                 if info["Os"] != "linux" or info["Architecture"] != "amd64":
                     raise ValueError("Normal Docker platform mismatch")
-                if not all(info["Config"]["Labels"].get(k) == v for k, v in upload.EXPECTED_LABELS.items()):
+                receipt["guardStage"] = "checking-source-labels"
+                if receipt["labels"] != upload.EXPECTED_LABELS:
                     raise ValueError("Normal Docker labels mismatch")
-                receipt["imageId"] = info["Id"]
-                receipt["repoDigests"] = info["RepoDigests"]
                 common = ["docker", "run", "--rm", "--pull=never", "--network=none", "--read-only",
                           "--cap-drop=all", "--security-opt=no-new-privileges", "--tmpfs",
                           "/tmp:rw,nosuid,nodev,size=64m", image + "@" + INDEX]
+                receipt["guardStage"] = "checking-sdk-version"
                 if run(common + ["--version"]).strip() != "journal-sdk 1.4.0":
                     raise ValueError("Normal Docker SDK version mismatch")
+                receipt["guardStage"] = "checking-offline-evaluation"
                 if run(common + ["--evaluate", "(+ 1 2)"]).strip() != "3":
                     raise ValueError("Offline evaluation mismatch")
-                expected = "artifact-sha256=" + upload.EXPECTED_LABELS["sync-web.aot-sha256"]
-                if expected not in receipt["commands"][-1]["stderr"]:
+                receipt["guardStage"] = "checking-runtime-attestation"
+                aot = upload.EXPECTED_LABELS["sync-web.aot-sha256"]
+                expected = "wasmer-runtime-attestation evaluator=wasmer-nofuel artifact-sha256=" + aot + " target=x86_64-linux evaluations=1\n"
+                if self.last_stderr != expected:
                     raise ValueError("Runtime AOT attestation mismatch")
+                receipt["runtimeAttestation"] = {"matchesExpected": True, "artifactSha256": aot,
+                                                 "evaluator": "wasmer-nofuel", "target": "x86_64-linux", "evaluations": 1}
+                receipt["guardStage"] = "complete"
                 receipt["result"] = "authenticated-tag-and-digest-pull-offline-runtime-passed"
             finally:
                 result = subprocess.run(["docker", "logout", "ghcr.io"], env=env,

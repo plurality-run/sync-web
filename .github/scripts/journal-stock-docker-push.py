@@ -82,7 +82,7 @@ def main():
               'index': 'sha256:' + INDEX, 'platform': 'sha256:' + PLATFORM,
               'attestation': 'sha256:' + ATTESTATION, 'config': 'sha256:' + CONFIG,
               'source': '3fb619382432e160ba029c493439f3432cad2ea2',
-              'pushAttempts': 0, 'automaticUploadAttempts': 1,
+              'pushAttempts': 0, 'engineRetryPolicy': 'unchanged-stock-default',
               'phase': 'preflight', 'rawOutputPersisted': False}
     temp = tempfile.TemporaryDirectory(prefix='stock-docker-auth-')
     env = dict(os.environ, DOCKER_CONFIG=temp.name)

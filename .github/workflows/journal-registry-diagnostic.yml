@@ -10,21 +10,20 @@ on:
 
 permissions:
   contents: read
-  packages: write
+  packages: read
   actions: read
 
 jobs:
-  publish-retained-graph-with-capture:
+  read-only-retained-graph-and-normal-docker:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      DIAGNOSTIC_TAG: diagnostic-c2-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
-      - name: Test sanitized capture and publication boundaries
+      - name: Test capture and read-only boundaries
         run: |
           python3 .github/scripts/test-journal-registry-diagnostic.py
           python3 .github/scripts/test-journal-registry-upload.py
+          python3 .github/scripts/test-journal-registry-readback.py
       - uses: actions/download-artifact@v4
         with:
           name: journal-registry-oci-archive-43122208660-1
@@ -34,15 +33,15 @@ jobs:
       - name: Verify exact retained canonical C2 archive
         run: |
           test "$(sha256sum retained-image/journal-diagnostic.tar | cut -d' ' -f1)" = 00c814293cd992bc4766be8781abb4d817d1c61e9a1eafa23ede51eb8c656e8c
-      - name: Capture fresh graph uploads with verified same-origin locations
+      - name: Read complete graph then normal Docker pull and offline runtime smoke
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIAGNOSTIC_ARCHIVE: retained-image/journal-diagnostic.tar
-          DIAGNOSTIC_OUTPUT: evidence/registry-upload.json
-        run: python3 .github/scripts/journal-registry-upload.py
+          DIAGNOSTIC_OUTPUT: evidence/registry-readback.json
+        run: python3 .github/scripts/journal-registry-readback.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: journal-registry-retained-graph-${{ github.run_id }}-${{ github.run_attempt }}
+          name: journal-registry-readback-${{ github.run_id }}-${{ github.run_attempt }}
           path: evidence/
           if-no-files-found: error

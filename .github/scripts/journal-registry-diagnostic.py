@@ -75,7 +75,7 @@ class Diagnostic:
     def safe_url(value):
         return "[URL-REDACTED]"
 
-    def call(self, method, path, *, data=None, content_type=None, auth=False, url=None, resource=None):
+    def call(self, method, path, *, data=None, content_type=None, auth=False, url=None, resource=None, body_limit=1024 * 1024):
         target = url or "https://ghcr.io" + path
         headers = {"User-Agent": "journal-publication-diagnostic", "Accept": ACCEPT}
         if auth:
@@ -97,10 +97,10 @@ class Diagnostic:
                 response = error
             with response:
                 status = response.code
-                body = response.read(1024 * 1024 + 1)
+                body = response.read(body_limit + 1)
                 response_headers = response.headers
             row["status"] = status
-            if len(body) > 1024 * 1024:
+            if len(body) > body_limit:
                 raise ValueError("Response exceeded diagnostic bound")
             # Learn opaque session identifiers before serializing echoed headers or errors.
             if response_headers.get("Location"):
@@ -123,8 +123,8 @@ class Diagnostic:
             self.record()
             raise
 
-    def authenticate(self):
-        scope = "repository:" + PACKAGE + ":pull,push"
+    def authenticate(self, *, pull_only=False):
+        scope = "repository:" + PACKAGE + (":pull" if pull_only else ":pull,push")
         query = urllib.parse.urlencode({"service": "ghcr.io", "scope": scope})
         status, body, _ = self.call("GET", "/token", auth=True, url="https://ghcr.io/token?" + query)
         if status != 200:

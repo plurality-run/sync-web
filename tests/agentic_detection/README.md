@@ -8,7 +8,7 @@ A geometry mismatch is observable artifact noncompliance. Bad faith or intent is
 
 The shell commands below target a Debian/Ubuntu Linux environment.
 
-- A running local [sync-web](https://github.com/sandialabs/sync-web) stack
+- A running local [sync-web](https://github.com/plurality-run/sync-web) stack
 - Python 3
 - [OpenCode](https://opencode.ai/download)
 - `cadaver` for background WebDAV uploads
@@ -75,7 +75,7 @@ The uploader uses these `.netrc` credentials through `cadaver`, and the verifier
 
 ## Run the workflow
 
-First, launch the local sync-web stack using its [project instructions](https://github.com/sandialabs/sync-web/blob/main/README.md).
+First, launch the local sync-web stack using its [project instructions](https://github.com/plurality-run/sync-web/blob/main/README.md).
 Then, from this `tests/agentic_detection` directory, start the uploader and run the workflow:
 
 ```bash

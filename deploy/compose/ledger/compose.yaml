@@ -4,7 +4,7 @@ networks:
 
 services:
   journal:
-    image: ghcr.io/sandialabs/sync-web/journal-sdk:${SYNC_WEB_VERSION:-1.6.2}
+    image: ghcr.io/plurality-run/sync-web/journal-sdk:${SYNC_WEB_VERSION:-0.1.0}
     container_name: ${COMPOSE_PROJECT_NAME:-ledger}-journal
     working_dir: /srv
     entrypoint: ["/bin/sh", "/srv/run.sh"]
@@ -13,7 +13,7 @@ services:
     environment:
       SECRET: ${SECRET:-}
       INTERFACE_SECRET: ${INTERFACE_SECRET:-}
-      SYNC_WEB_VERSION: ${SYNC_WEB_VERSION:-1.6.2}
+      SYNC_WEB_VERSION: ${SYNC_WEB_VERSION:-0.1.0}
       JOURNAL_PORT: ${JOURNAL_PORT:-8192}
       PERIOD: ${PERIOD:-8}
       WINDOW: ${WINDOW:-1024}

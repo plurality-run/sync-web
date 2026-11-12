@@ -87,10 +87,10 @@ def journal_contract_errors(text: str) -> list[str]:
         errors.append("build-journal-sdk job must contain exactly one guarded musl push contract")
     tag_job = " ".join(workflow_job(text, "tag-version").split())
     guard = (
-        "if: always() && github.ref == 'refs/heads/main' && "
-        "needs.changes.outputs.version == 'true' && "
-        "(needs.build-journal-sdk.result == 'success' || "
-        "needs.build-journal-sdk.result == 'skipped')"
+        "if: github.event_name == 'workflow_dispatch' && "
+        "github.ref == 'refs/heads/main' && inputs.release && "
+        "needs.build-journal-sdk.result == 'success' && "
+        "needs.compose-smoke.result == 'success'"
     )
     promote = "run: .github/scripts/promote-image.sh journal-sdk VERSION musl preferred"
     if tag_job.count(guard) != 1 or tag_job.count(promote) != 1:
@@ -300,7 +300,7 @@ journal_mutations += (
     (
         "weakened promotion job guard",
         journal_workflow.replace(
-            "    if: always() && github.ref == 'refs/heads/main' && needs.changes.outputs.version == 'true' && (needs.build-journal-sdk.result == 'success' || needs.build-journal-sdk.result == 'skipped')",
+            "    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release && needs.build-journal-sdk.result == 'success' && needs.compose-smoke.result == 'success'",
             "    if: always()",
         ),
         "tag-version job",
@@ -308,14 +308,14 @@ journal_mutations += (
     (
         "relocated promotion contract",
         journal_workflow.replace(
-            "    if: always() && github.ref == 'refs/heads/main' && needs.changes.outputs.version == 'true' && (needs.build-journal-sdk.result == 'success' || needs.build-journal-sdk.result == 'skipped')",
+            "    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release && needs.build-journal-sdk.result == 'success' && needs.compose-smoke.result == 'success'",
             "    if: always()",
         ).replace(
             "        run: .github/scripts/promote-image.sh journal-sdk VERSION musl preferred",
             "        run: echo promotion-disabled",
         )
         + "\n  promotion-decoy:\n"
-        + "    if: always() && github.ref == 'refs/heads/main' && needs.changes.outputs.version == 'true' && (needs.build-journal-sdk.result == 'success' || needs.build-journal-sdk.result == 'skipped')\n"
+        + "    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release && needs.build-journal-sdk.result == 'success' && needs.compose-smoke.result == 'success'\n"
         + "    steps:\n"
         + "      - run: .github/scripts/promote-image.sh journal-sdk VERSION musl preferred\n",
         "tag-version job",

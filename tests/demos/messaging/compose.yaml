@@ -32,11 +32,11 @@ x-agent: &agent
 services:
   journal:
     platform: linux/amd64
-    image: ghcr.io/sandialabs/sync-web/journal-sdk:1.6.2
+    image: ghcr.io/plurality-run/sync-web/journal-sdk:0.1.0
     working_dir: /srv
     entrypoint: [/bin/sh, /srv/run.sh]
     environment:
-      SYNC_WEB_VERSION: 1.6.2
+      SYNC_WEB_VERSION: 0.1.0
       SECRET: ${HUMAN_ROOT_SECRET:-demo-human-root}
       INTERFACE_SECRET: ${HUMAN_INTERFACE_SECRET:-demo-human-interface}
       INTERFACE_ADMINS: admin
@@ -61,7 +61,7 @@ services:
 
   gateway:
     platform: linux/amd64
-    image: ghcr.io/sandialabs/sync-web/gateway:1.6.2
+    image: ghcr.io/plurality-run/sync-web/gateway:0.1.0
     environment:
       HOST: 0.0.0.0
       PORT: 80
@@ -82,7 +82,7 @@ services:
 
   identity-provider:
     platform: linux/amd64
-    image: ghcr.io/sandialabs/sync-web/identity-provider:1.6.2
+    image: ghcr.io/plurality-run/sync-web/identity-provider:0.1.0
     environment:
       ORIGIN: http://localhost:${DEMO_PORT:-8192}
       ADMIN_USERNAME: admin
@@ -99,7 +99,7 @@ services:
 
   explorer:
     platform: linux/amd64
-    image: ghcr.io/sandialabs/sync-web/explorer:1.6.2
+    image: ghcr.io/plurality-run/sync-web/explorer:0.1.0
     environment:
       SYNC_EXPLORER_ENDPOINT: /api/v1
     networks: [demo]

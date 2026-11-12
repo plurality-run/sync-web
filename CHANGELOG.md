@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0 (Plurality edition)
+
+- Port the Sandia 1.6.2 baseline to the `plurality-run/sync-web` repository, documentation site and container/binary artifact namespace.
+- Synchronize platform manifests and consumers on the Plurality 0.1.0 line; retain independently versioned tools and the unchanged Records installer generation.
+- Preserve the original license, historical releases and attribution. Hosting is qualified separately from source preparation; see `docs/plurality-port.md`.
+
 ## 1.6.2
 
 ### Fixed

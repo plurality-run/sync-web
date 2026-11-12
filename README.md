@@ -1,8 +1,10 @@
-# Synchronic Web
+# Synchronic Web - Plurality Edition
 
 The Synchronic Web is infrastructure for data assurance. Each journal maintains immutable, cryptographically linked records. Reciprocal bridges exchange root-signed heads so journals can preserve and inspect verifiable cross-journal history without requiring global consensus. Applications can retain selective proof material and verify data against an exact committed journal state.
 
-Full documentation: [sandialabs.github.io/sync-web](https://sandialabs.github.io/sync-web)
+Plurality 0.1.0 ports the Sandia Sync Web 1.6.2 baseline to Plurality-owned project destinations and release artifacts. Records behavior and its internal installer generation remain unchanged; original licenses, attribution and release history are preserved. See [the port and hosting checklist](docs/plurality-port.md) for artifact availability and acceptance gates.
+
+Full documentation: [plurality-run.github.io/sync-web](https://plurality-run.github.io/sync-web)
 
 ## Federation model
 
@@ -30,13 +32,13 @@ Sync Web 1.6 uses reciprocal bridges for identity, proof reachability, and signe
 The fastest way to run a local stack:
 
 ```sh
-COMPOSE_PROJECT_NAME=sync-local SYNC_WEB_VERSION=1.6.2 \
+COMPOSE_PROJECT_NAME=sync-local SYNC_WEB_VERSION=0.1.0 \
 SECRET=your-root-secret INTERFACE_SECRET=your-interface-secret \
 ADMIN_PASSWORD=your-login-password HTTP_PORT=8192 HTTPS_PORT=8193 \
 docker compose -f deploy/compose/general/compose.yaml up
 ```
 
-Use `podman-compose` or `podman compose` instead of `docker compose` if that is your container runtime. Sync Web 1.6.2 supports fresh installation and exact updates from 1.5.0 or released 1.6.0/1.6.1 through the explicit update procedure; unsupported or unmarked existing databases fail closed. Already-diverged endpoint configuration needs the explicit repair in [`docs/migrations/1.6.2-endpoint-sync.md`](docs/migrations/1.6.2-endpoint-sync.md); code installation alone does not repair it. See `deploy/compose/general/README.md` for full configuration options, `tests/release-qa/README.md` for exact-image acceptance checks, and `docs/development-checks.md` for validation commands and tool dependencies.
+Use `podman-compose` or `podman compose` instead of `docker compose` if that is your container runtime. Plurality 0.1.0 retains the Sandia 1.6.2 installer, supporting fresh installation and exact updates from 1.5.0 or released 1.6.0/1.6.1 through the explicit update procedure; unsupported or unmarked existing databases fail closed. Already-diverged endpoint configuration needs the explicit repair in [`docs/migrations/1.6.2-endpoint-sync.md`](docs/migrations/1.6.2-endpoint-sync.md); code installation alone does not repair it. See `deploy/compose/general/README.md` for full configuration options, `tests/release-qa/README.md` for exact-image acceptance checks, and `docs/development-checks.md` for validation commands and tool dependencies.
 
 ## Messaging Demo
 

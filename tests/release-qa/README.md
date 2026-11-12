@@ -4,7 +4,7 @@ This directory contains opt-in, process-isolated acceptance checks. These checks
 
 ## Current release holds
 
-The 1.6.2 candidate supports fresh installation plus exact, explicit `1.5.0` to `1.6.2` and released `1.6.0`/`1.6.1` to `1.6.2` updates. The deployment wrapper requires one of those predecessor markers and `JOURNAL_UPDATE=1`, advances the marker only after the atomic Interface transition succeeds, and fails closed for every other nonfresh state. The Interface installer records its private maintenance version to reject reapplication. Endpoint mismatch repair remains a separate explicit post-update step; see `docs/migrations/1.6.2-endpoint-sync.md`.
+The Plurality 0.1.0 candidate retains the Sandia 1.6.2 installer, with fresh installation plus exact, explicit `1.5.0` and released `1.6.0`/`1.6.1` updates to the `0.1.0` deployment marker. The deployment wrapper requires one of those predecessor markers and `JOURNAL_UPDATE=1`, advances the marker only after the atomic Interface transition succeeds, and fails closed for every other nonfresh state. The Interface installer records its private maintenance version to reject reapplication. Endpoint mismatch repair remains a separate explicit post-update step; see `docs/migrations/1.6.2-endpoint-sync.md`.
 
 Sync Web 1.6 makes no deterministic stored-execution meter, limit, budget, configuration, timeout, or meter-specific error/SSE claim. `run!` has an independent path-scoped boolean Authorization permission for local non-admin and authenticated remote route principals; namespace ownership and blank read-only `use!` do not imply it. Root and configured local Interface administrators retain default access.
 

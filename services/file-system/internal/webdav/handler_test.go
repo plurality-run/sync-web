@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sandialabs/sync-web/services/file-system/internal/gateway"
+	"github.com/plurality-run/sync-web/services/file-system/internal/gateway"
 )
 
 func TestStagePutGetCopyMoveDelete(t *testing.T) {

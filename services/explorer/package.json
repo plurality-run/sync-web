@@ -1,6 +1,6 @@
 {
   "name": "synchronic-web-explorer",
-  "version": "1.6.2",
+  "version": "0.1.0",
   "description": "UI front-end for exploring a synchronic web journal",
   "private": true,
   "homepage": "/explorer",

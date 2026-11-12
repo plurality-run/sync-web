@@ -28,6 +28,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -62,6 +63,6 @@ jobs:
         with:
           path: './docs/info/dist/'
       - name: Deploy to GitHub Pages
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         id: deployment
         uses: actions/deploy-pages@v4

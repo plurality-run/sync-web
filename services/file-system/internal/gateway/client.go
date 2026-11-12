@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sandialabs/sync-web/services/file-system/internal/paths"
+	"github.com/plurality-run/sync-web/services/file-system/internal/paths"
 )
 
 type Client struct {

@@ -1,17 +1,23 @@
 name: Identity Provider Service
 
 on:
+  workflow_call:
+    inputs:
+      release:
+        description: Explicit platform publication, only from the main release entry point
+        type: boolean
+        default: false
   workflow_dispatch:
   push:
     branches: ["**"]
-    paths: ["services/identity-provider/**", "VERSION", ".github/workflows/services-identity-provider.yml"]
+    paths: ["services/identity-provider/**", "VERSION", ".github/workflows/services-identity-provider.yml", ".github/scripts/promote-image.sh", ".github/scripts/check-platform-release.sh"]
   pull_request:
     branches: ["main"]
-    paths: ["services/identity-provider/**", ".github/workflows/services-identity-provider.yml"]
+    paths: ["services/identity-provider/**", "VERSION", ".github/workflows/services-identity-provider.yml", ".github/scripts/promote-image.sh", ".github/scripts/check-platform-release.sh"]
 
 concurrency:
-  group: "services-identity-provider-${{ github.ref }}"
-  cancel-in-progress: true
+  group: "services-identity-provider-${{ github.ref }}-${{ inputs.release && 'release' || 'ci' }}"
+  cancel-in-progress: ${{ !inputs.release }}
 
 jobs:
   run:
@@ -29,20 +35,29 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Check explicit release source
+        if: inputs.release
+        env:
+          PLATFORM_RELEASE: ${{ inputs.release }}
+        run: .github/scripts/check-platform-release.sh "$GITHUB_SHA" "$(cat VERSION)"
       - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
             service:
               - 'services/identity-provider/**'
+            workflow:
+              - '.github/workflows/services-identity-provider.yml'
+              - '.github/scripts/promote-image.sh'
+              - '.github/scripts/check-platform-release.sh'
             version:
               - 'VERSION'
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build pull request validation image
-        if: github.event_name == 'pull_request' && steps.filter.outputs.service == 'true'
+      - name: Build merge or pull request validation image
+        if: ${{ !inputs.release && (github.event_name == 'pull_request' || (github.ref == 'refs/heads/main' && steps.filter.outputs.version == 'true') || steps.filter.outputs.workflow == 'true') && (steps.filter.outputs.service == 'true' || steps.filter.outputs.version == 'true' || steps.filter.outputs.workflow == 'true') }}
         uses: docker/build-push-action@v6
         with:
           context: services/identity-provider
@@ -50,7 +65,7 @@ jobs:
           push: false
           tags: ghcr.io/${{ github.repository }}/identity-provider:pr-validation
       - name: Build and push SHA-tagged validation image
-        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/main' && (steps.filter.outputs.service == 'true' || steps.filter.outputs.version == 'true')
+        if: github.event_name != 'pull_request' && (github.ref != 'refs/heads/main' || inputs.release) && (inputs.release || steps.filter.outputs.service == 'true' || steps.filter.outputs.version == 'true')
         uses: docker/build-push-action@v6
         with:
           context: services/identity-provider
@@ -58,7 +73,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}/identity-provider:sha-${{ github.sha }}
       - name: Build and push latest image for direct main service changes
-        if: github.ref == 'refs/heads/main' && steps.filter.outputs.service == 'true' && steps.filter.outputs.version != 'true'
+        if: ${{ !inputs.release && github.ref == 'refs/heads/main' && steps.filter.outputs.service == 'true' && steps.filter.outputs.version != 'true' }}
         uses: docker/build-push-action@v6
         with:
           context: services/identity-provider
@@ -66,7 +81,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}/identity-provider:latest
       - name: Promote validated image
-        if: github.ref == 'refs/heads/main' && steps.filter.outputs.version == 'true'
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLATFORM_RELEASE: ${{ inputs.release }}
         run: .github/scripts/promote-image.sh identity-provider

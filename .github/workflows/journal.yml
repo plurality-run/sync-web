@@ -1,38 +1,36 @@
 name: Journal & Compose
 
 on:
+  workflow_call:
+    inputs:
+      release:
+        description: Explicit platform publication, only from the main release entry point
+        type: boolean
+        default: false
   workflow_dispatch:
   push:
     branches: ["**"]
-    paths: ["journal/**", "records/**", "deploy/**", "VERSION", ".github/workflows/journal.yml"]
+    paths: ["journal/**", "records/**", "deploy/**", "VERSION", ".github/workflows/journal.yml", ".github/scripts/promote-image.sh", ".github/scripts/check-platform-release.sh", ".github/scripts/check-platform-release-version.py", ".github/scripts/test-platform-release.py", ".github/workflows/platform-release.yml"]
   pull_request:
     branches: ["main"]
-    paths: ["journal/**", "records/**", "deploy/**", ".github/workflows/journal.yml"]
+    paths: ["journal/**", "records/**", "deploy/**", "VERSION", ".github/workflows/journal.yml", ".github/scripts/promote-image.sh", ".github/scripts/check-platform-release.sh", ".github/scripts/check-platform-release-version.py", ".github/scripts/test-platform-release.py", ".github/workflows/platform-release.yml"]
 
 concurrency:
-  group: "journal-compose-${{ github.ref }}"
-  cancel-in-progress: true
+  group: "journal-compose-${{ github.ref }}-${{ inputs.release && 'release' || 'ci' }}"
+  cancel-in-progress: ${{ !inputs.release }}
 
 jobs:
   changes:
     runs-on: ubuntu-latest
-    outputs:
-      journal: ${{ steps.filter.outputs.journal }}
-      version: ${{ steps.filter.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            journal:
-              - 'journal/**'
-            version:
-              - 'VERSION'
+      - name: Check release guards offline
+        run: |
+          python3 .github/scripts/test-platform-release.py -v
+          bash -n .github/scripts/check-platform-release.sh .github/scripts/promote-image.sh
 
   test-journal:
     needs: changes
-    if: (needs.changes.outputs.journal == 'true' || needs.changes.outputs.version == 'true') && !(github.ref == 'refs/heads/main' && needs.changes.outputs.version == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,7 +81,7 @@ jobs:
 
   build-journal-sdk:
     needs: [changes, test-journal]
-    if: (needs.changes.outputs.journal == 'true' || needs.changes.outputs.version == 'true') && needs.test-journal.result == 'success'
+    if: needs.test-journal.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -123,7 +121,7 @@ jobs:
 
   compose-smoke:
     needs: [changes, test-journal, build-journal-sdk]
-    if: always() && github.ref != 'refs/heads/main' && !cancelled() && !failure()
+    if: needs.test-journal.result == 'success' && needs.build-journal-sdk.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -141,8 +139,8 @@ jobs:
           tests/api/local-compose.sh smoke
 
   tag-version:
-    needs: [changes, build-journal-sdk]
-    if: always() && github.ref == 'refs/heads/main' && needs.changes.outputs.version == 'true' && (needs.build-journal-sdk.result == 'success' || needs.build-journal-sdk.result == 'skipped')
+    needs: [changes, build-journal-sdk, compose-smoke]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release && needs.build-journal-sdk.result == 'success' && needs.compose-smoke.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -159,5 +157,5 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - name: Promote validated image
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLATFORM_RELEASE: ${{ inputs.release }}
         run: .github/scripts/promote-image.sh journal-sdk VERSION musl preferred

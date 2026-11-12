@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sandialabs/sync-web/services/file-system/internal/paths"
+	"github.com/plurality-run/sync-web/services/file-system/internal/paths"
 )
 
 func TestJSONPathEncodesWebDAVSegmentsAsSchemeIdentifiers(t *testing.T) {

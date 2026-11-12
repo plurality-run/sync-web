@@ -14,7 +14,7 @@ permissions:
   actions: read
 
 jobs:
-  classify-upload-location-no-content-put:
+  publish-retained-graph-with-capture:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -34,16 +34,15 @@ jobs:
       - name: Verify exact retained canonical C2 archive
         run: |
           test "$(sha256sum retained-image/journal-diagnostic.tar | cut -d' ' -f1)" = 00c814293cd992bc4766be8781abb4d817d1c61e9a1eafa23ede51eb8c656e8c
-      - name: Classify fresh upload location without any content PUT
+      - name: Capture fresh graph uploads with verified same-origin locations
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIAGNOSTIC_ARCHIVE: retained-image/journal-diagnostic.tar
-          DIAGNOSTIC_OUTPUT: evidence/registry-location-probe.json
-          DIAGNOSTIC_LOCATION_PROBE: '1'
+          DIAGNOSTIC_OUTPUT: evidence/registry-upload.json
         run: python3 .github/scripts/journal-registry-upload.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: journal-registry-location-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          name: journal-registry-retained-graph-${{ github.run_id }}-${{ github.run_attempt }}
           path: evidence/
           if-no-files-found: error

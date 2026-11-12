@@ -46,7 +46,7 @@ class UploadTests(unittest.TestCase):
                 archive.addfile(info, io.BytesIO(body))
         return root
 
-    def run_upload(self, path, *, missing_blobs=False, reject=None, timeout=False, receipt=None):
+    def run_upload(self, path, *, missing_blobs=False, reject=None, timeout=False, receipt=None, upload_prefix="uploads"):
         calls = []
         simulate_timeout = timeout
         def transport(request, timeout=60):
@@ -56,7 +56,7 @@ class UploadTests(unittest.TestCase):
             if request.method == "HEAD":
                 return Response(404 if missing_blobs else 200)
             if request.method == "POST":
-                return Response(202, headers={"Location": "https://ghcr.io/v2/" + module.base.PACKAGE + "/blobs/uploads/session?upload_state=opaque-private-session"})
+                return Response(202, headers={"Location": "https://ghcr.io/v2/" + module.base.PACKAGE + "/blobs/" + upload_prefix + "/session?upload_state=opaque-private-session"})
             if simulate_timeout:
                 raise TimeoutError("never-emit-private-detail")
             if reject and "/manifests/" in request.full_url:
@@ -113,6 +113,16 @@ class UploadTests(unittest.TestCase):
             self.assertNotIn("registry-secret", json.dumps(upload.report))
             self.assertEqual(upload.report["operations"][-1]["status"], 403)
 
+    def test_observed_same_origin_singular_upload_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/"image.tar"
+            self.graph(path)
+            upload, calls = self.run_upload(path, missing_blobs=True, upload_prefix="upload")
+            self.assertEqual(upload.report["publication"], "accepted")
+            self.assertTrue(upload.report["uploadLocationValidation"]["singularUploadPrefix"])
+            self.assertFalse(any(c.method == "PUT" and not c.full_url.startswith("https://ghcr.io/") for c in calls))
+            self.assertNotIn("opaque-private-session", json.dumps(upload.report))
+
     def test_location_probe_static_flags_and_no_put(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)/"image.tar"
@@ -136,6 +146,12 @@ class UploadTests(unittest.TestCase):
                 self.assertEqual(sum(c.method == "POST" for c in calls), 1)
                 self.assertNotIn("INERT-PRIVATE-SESSION-CANARY", json.dumps(upload.report))
                 self.assertNotIn("INERT-QUERY-CANARY", json.dumps(upload.report))
+                if origin == "https://untrusted.invalid":
+                    calls.clear()
+                    blocked = module.Upload("ghs_job-secret", "actor", "diagnostic-c2-123-1", transport)
+                    with self.assertRaises(ValueError):
+                        blocked.run_archive(path)
+                    self.assertFalse(any(c.method == "PUT" or c.full_url.startswith(origin) for c in calls))
 
     def test_session_path_and_query_redacted_in_error_and_headers(self):
         with tempfile.TemporaryDirectory() as directory:

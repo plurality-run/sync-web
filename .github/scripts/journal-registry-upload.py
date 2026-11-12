@@ -123,7 +123,7 @@ class Upload(base.Diagnostic):
                 self.report["publication"] = "session-start-acknowledged-no-content-puts"
                 self.report["phase"] = "location-shape-probe-complete-no-put"
                 return
-            if location.scheme != "https" or location.netloc != "ghcr.io" or not location.path.startswith(prefix + "/blobs/uploads/"):
+            if location.scheme != "https" or location.netloc != "ghcr.io" or not location.path.startswith((prefix + "/blobs/uploads/", prefix + "/blobs/upload/")):
                 raise ValueError("Unexpected upload location")
             query = urllib.parse.parse_qsl(location.query, keep_blank_values=True)
             self.secrets.extend(value for _, value in query if value)

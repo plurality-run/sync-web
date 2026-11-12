@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline release-event/source guards; no registry, dispatch or release writes."""
 import importlib.util
+import io
 import os
 from pathlib import Path
 import re
@@ -285,6 +286,16 @@ class PublishedVersionGuards(unittest.TestCase):
                 else:
                     with self.assertRaises(RELEASE_VERSION.InspectionError):
                         RELEASE_VERSION.read_api('/fixture', 'fixture-token')
+
+    def test_successful_nonobject_payload_is_not_absence(self):
+        for body in [b'null', b'[]', b'"fixture"', b'0', b'false']:
+            with self.subTest(body=body), patch.object(RELEASE_VERSION.urllib.request, 'build_opener') as opener:
+                opener.return_value.open.return_value = io.BytesIO(body)
+                with self.assertRaises(RELEASE_VERSION.InspectionError):
+                    RELEASE_VERSION.read_api('/fixture', 'fixture-token')
+        with patch.object(RELEASE_VERSION.urllib.request, 'build_opener') as opener:
+            opener.return_value.open.return_value = io.BytesIO(b'{}')
+            self.assertEqual(RELEASE_VERSION.read_api('/fixture', 'fixture-token'), {})
 
     def test_transport_read_failure_never_reaches_producers(self):
         responses = self.responses()

@@ -24,7 +24,10 @@ def read_api(path, token):
     )
     try:
         with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as response:
-            return json.load(response)
+            payload = json.load(response)
+            if not isinstance(payload, dict):
+                raise InspectionError('Published-version inspection returned a non-object payload; absence is unconfirmed.')
+            return payload
     except urllib.error.HTTPError as error:
         if error.code == 404:
             return None

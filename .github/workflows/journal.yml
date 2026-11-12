@@ -96,13 +96,10 @@ jobs:
           path: target/qualified-kernel
       - name: Verify tested Wasmer AOT provenance
         run: journal/scripts/check-wasmer-kernel-provenance.py target/qualified-kernel "$GITHUB_SHA"
-      - name: Login to Github registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test complete-graph publisher boundaries
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 journal/scripts/test-publish-journal-image.py
       - name: Build provenance-locked musl image
         env:
           CONTAINER_RUNTIME: docker
@@ -112,14 +109,20 @@ jobs:
             --kernel target/qualified-kernel/kernel.wasmer \
             --tag ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl \
             --evidence-dir target/journal-image-evidence
-      - name: Push SHA-tagged validation image
-        if: github.event_name != 'pull_request'
-        run: docker push ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl
+      - name: Retain complete image with build evidence
+        run: |
+          docker save --output target/journal-image-evidence/image.tar ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl
+          sha256sum target/journal-image-evidence/image.tar > target/journal-image-evidence/image.tar.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: journal-image-provenance
           path: target/journal-image-evidence
           if-no-files-found: error
+      - name: Push SHA-tagged validation image
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 journal/scripts/publish-journal-image.py target/journal-image-evidence/image.tar target/journal-image-evidence target/qualified-kernel/kernel.wasmer
 
   compose-smoke:
     needs: [changes, test-journal, build-journal-sdk]

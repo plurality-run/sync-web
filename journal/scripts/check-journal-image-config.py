@@ -5,6 +5,18 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOCK = "d69e38d29ecabd5ae3d62cf2a7c018b292a9e3a40102a0547971bf0d03e34854"
+PUBLISH_COMMAND = (
+    "python3 journal/scripts/publish-journal-image.py "
+    "target/journal-image-evidence/image.tar target/journal-image-evidence "
+    "target/qualified-kernel/kernel.wasmer"
+)
+PUBLISH_STEP = (
+    "      - name: Push SHA-tagged validation image\n"
+    "        if: github.event_name != 'pull_request'\n"
+    "        env:\n"
+    "          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n"
+    f"        run: {PUBLISH_COMMAND}\n"
+)
 
 
 def fail(message: str) -> None:
@@ -73,10 +85,14 @@ def journal_contract_errors(text: str) -> list[str]:
         "--tag ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl "
         "--evidence-dir target/journal-image-evidence"
     )
-    push = (
-        "- name: Push SHA-tagged validation image "
-        "if: github.event_name != 'pull_request' "
-        "run: docker push ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl"
+    push = " ".join(PUBLISH_STEP.split())
+    archive = (
+        "docker save --output target/journal-image-evidence/image.tar "
+        "ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl"
+    )
+    retain = (
+        "uses: actions/upload-artifact@v4 with: name: journal-image-provenance "
+        "path: target/journal-image-evidence if-no-files-found: error"
     )
     verify = 'journal/scripts/check-wasmer-kernel-provenance.py target/qualified-kernel "$GITHUB_SHA"'
     if build_job.count(verify) != 1:
@@ -85,6 +101,10 @@ def journal_contract_errors(text: str) -> list[str]:
         errors.append("build-journal-sdk job must contain exactly one musl build contract")
     if build_job.count(push) != 1:
         errors.append("build-journal-sdk job must contain exactly one guarded musl push contract")
+    if build_job.count(archive) != 1 or build_job.count(retain) != 1 or not (
+        0 <= build_job.find(build) < build_job.find(archive) < build_job.find(retain) < build_job.find(push)
+    ):
+        errors.append("build-journal-sdk job must retain the complete musl archive before publication")
     tag_job = " ".join(workflow_job(text, "tag-version").split())
     guard = (
         "if: always() && github.ref == 'refs/heads/main' && "
@@ -254,21 +274,13 @@ journal_mutations = (
         "musl build contract",
     ),
     (
-        "wrong musl push tag",
-        journal_workflow.replace(
-            "run: docker push ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl",
-            "run: docker push ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-wrong",
-        ),
+        "wrong publisher archive binding",
+        journal_workflow.replace(PUBLISH_COMMAND, PUBLISH_COMMAND.replace("image.tar", "wrong.tar")),
         "musl push contract",
     ),
     (
         "missing musl push",
-        journal_workflow.replace(
-            "      - name: Push SHA-tagged validation image\n"
-            "        if: github.event_name != 'pull_request'\n"
-            "        run: docker push ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl\n",
-            "",
-        ),
+        journal_workflow.replace(PUBLISH_STEP, ""),
         "musl push contract",
     ),
     (
@@ -287,14 +299,21 @@ journal_mutations = (
 )
 journal_mutations += (
     (
-        "missing push non-PR guard",
-        journal_workflow.replace(
-            "      - name: Push SHA-tagged validation image\n"
-            "        if: github.event_name != 'pull_request'\n"
-            "        run: docker push ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl\n",
-            "      - name: Push SHA-tagged validation image\n"
-            "        run: docker push ghcr.io/${{ github.repository }}/journal-sdk:sha-${{ github.sha }}-musl\n",
+        "missing complete image export",
+        journal_workflow.replace("docker save --output", "echo export-disabled --output"),
+        "retain the complete musl archive",
+    ),
+    (
+        "publication before retention",
+        journal_workflow.replace(PUBLISH_STEP, "").replace(
+            "      - name: Retain complete image with build evidence\n",
+            PUBLISH_STEP + "      - name: Retain complete image with build evidence\n",
         ),
+        "retain the complete musl archive",
+    ),
+    (
+        "missing push non-PR guard",
+        journal_workflow.replace(PUBLISH_STEP, PUBLISH_STEP.replace("        if: github.event_name != 'pull_request'\n", "")),
         "guarded musl push contract",
     ),
     (

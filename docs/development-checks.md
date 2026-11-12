@@ -53,9 +53,10 @@ This repo has several independent validation layers. Run the checks relevant to 
 
 ## CI release posture
 
-- Pull request and branch validation builds produce `sha-<commit>` container images for changed services.
-- Version-bump merges to `main` should promote the validated SHA images to `latest` and the version from `VERSION`; they should not rebuild expensive multi-arch images on `main`.
-- Direct non-version changes on `main` are a fallback path and may still rebuild images. Prefer PR branches for release changes.
+- Pull requests validate without pushing; branch CI can publish `sha-<commit>` development images. Main/version merges perform real CI without creating numbered releases or versioned-image promotion.
+- After owner approval, the single `Platform Release` manual entry point checks the exact main commit/version and reuses existing producers to build/test/publish that selected source. Release intent defaults false, and promotion never substitutes a PR-head image. See [operator instructions and exact development publication behavior](plurality-port.md#explicit-platform-release).
+- Existing service non-version main `latest`, social-agent development `latest`, automatic Pages and independent Recorder tag releases remain separate, documented behaviors; none implies platform release approval.
+- Offline release guard/event/source-binding tests: `python3 .github/scripts/test-platform-release.py -v`; shell checks: `bash -n .github/scripts/check-platform-release.sh .github/scripts/promote-image.sh`.
 - Journal image builds use `cargo-chef` and registry BuildKit cache. Source-only Rust changes can reuse dependency layers; dependency graph changes in `journal/Cargo.toml` or lockfile inputs invalidate the dependency recipe and require a real rebuild per architecture.
 
 ## Release QA

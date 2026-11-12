@@ -1,6 +1,12 @@
 name: Ledger Binaries
 
 on:
+  workflow_call:
+    inputs:
+      release:
+        description: Explicit platform publication, only from the main release entry point
+        type: boolean
+        default: false
   workflow_dispatch:
   push:
     branches: ["**"]
@@ -22,26 +28,19 @@ on:
       - ".github/workflows/ledger.yml"
 
 concurrency:
-  group: "ledger-binaries-${{ github.ref }}"
-  cancel-in-progress: true
+  group: "ledger-binaries-${{ github.ref }}-${{ inputs.release && 'release' || 'ci' }}"
+  cancel-in-progress: ${{ !inputs.release }}
 
 jobs:
   metadata:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.value }}
-      version_changed: ${{ steps.changes.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            version:
-              - 'VERSION'
       - name: Read platform version
         id: version
         run: echo "value=$(cat VERSION)" >> "$GITHUB_OUTPUT"
@@ -149,12 +148,17 @@ jobs:
           if-no-files-found: error
 
   publish-release:
-    if: github.ref == 'refs/heads/main' && needs.metadata.outputs.version_changed == 'true'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release
     needs: [metadata, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      - name: Check explicit release source
+        env:
+          PLATFORM_RELEASE: ${{ inputs.release }}
+        run: .github/scripts/check-platform-release.sh "$GITHUB_SHA" "$(cat VERSION)"
       - uses: actions/download-artifact@v4
         with:
           pattern: ledger-binaries-*

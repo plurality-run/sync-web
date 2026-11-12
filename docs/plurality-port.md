@@ -46,16 +46,17 @@ fixtures and their expected Records generation remain unchanged.
    images. Ledger and Recorder build jobs upload workflow artifacts; they do
    not create a release from the feature branch.
 3. Check each validation image's source provenance, actual pull access and
-   visibility in the new namespace. Seven platform images are promoted using
-   `.github/scripts/promote-image.sh`, which looks up the accepted PR head SHA.
-   A readable source SHA image must exist before that promotion can work.
-4. Obtain the owner's acceptance and authorized merge. No unilateral merge,
-   final tag, version promotion or deployment is part of source preparation.
-5. At that transition, the existing main-branch version workflows promote the
-   platform images and publish `ledger-v0.1.0`. The social-agent is built and
-   tested for a root-version change, so first publication does not depend on an
-   already-existing `latest` image in the new namespace. Pages deployment stays
-   main-only; a PR builds documentation without requiring Pages setup.
+   visibility in the new namespace. These are development artifacts, not an
+   approved numbered release or substitutes for the selected main source.
+4. Obtain the owner's acceptance and authorized squash merge. Main CI performs
+   real validation, including Journal native/AOT/build/Compose checks even when
+   `VERSION` changes. Merge alone does not approve a numbered release.
+5. After explicit owner approval of the main commit and version, dispatch the
+   single platform release entry point below. It builds/tests that exact source,
+   publishes its SHA images, promotes those same-source images and publishes
+   `ledger-v0.1.0` plus the platform social-agent version. It never selects an
+   associated PR head or a diagnostic image. Pages remains a separate main-only
+   development deployment; a PR builds docs without requiring Pages setup.
 6. Validate final image digests/source labels, unauthenticated pulls as intended,
    binary asset availability/checksums and the published docs/PDF before using
    their consumers. Run exact-image Compose/API and network acceptance against
@@ -64,6 +65,60 @@ fixtures and their expected Records generation remain unchanged.
 The normal branch-push workflows run in addition to PR workflows. Review their
 publication effects before pushing. Preserve failed runs and source/image
 identities; do not reinterpret a package write as end-to-end hosting success.
+
+## Explicit platform release
+
+`Platform Release` (`.github/workflows/platform-release.yml`) is the single
+owner-triggered numbered platform publication entry point. After merge and owner
+approval, select **main** in Actions and supply the full main SHA and its root
+`VERSION`. For example, using the existing repository access:
+
+```sh
+gh workflow run platform-release.yml --ref main \
+  -f commit="$APPROVED_MAIN_SHA" -f version=0.1.0
+```
+
+Set `APPROVED_MAIN_SHA` to the full owner-approved main SHA first. This is an
+operator instruction, not approval to execute it. The selected SHA
+must equal the main SHA captured by that dispatch and each checkout; the version
+must equal the committed `VERSION` and synchronized manifests. A branch dispatch,
+wrong SHA or version fails before producer jobs. If main moves before dispatch,
+select/review the new main SHA rather than publishing some other source silently.
+
+The entry point reuses Journal, Ledger, six service and social-agent workflows
+with explicit `release: true`. All other events, including their individual
+manual CI buttons, default to false. Journal promotion requires successful native,
+image and Compose jobs; it cannot promote a skipped builder. Native/AOT/linkage,
+source provenance, runtime smoke and release checksums remain mandatory. Existing
+image promotion uses the selected `GITHUB_SHA`, never a PR-head lookup. Journal
+and six service numbered images retain the existing Linux/amd64 validation-image
+path (Journal preferred musl); social-agent retains amd64/arm64, and Ledger
+retains its Linux/x86_64 glibc/musl binaries and qualified AOT. No extra architecture
+support is implied.
+
+This automates the existing publication mechanics with ordinary Docker and the
+repository `GITHUB_TOKEN`, without new credentials, trust or repository settings.
+Publication is not transactional: if a producer fails, the run fails and other
+producers may already have published. Preserve that outcome and inspect it before
+any separately owner-approved recovery; do not automatically replay the workflow
+or assume a failed run rolled back accepted writes. Success is publication,
+not deployment or final consumer/hosting acceptance.
+
+### Separate development behavior
+
+- PR builds validate without pushing images. Branch pushes can publish SHA images;
+  Journal also publishes a SHA image from automatic main CI. These are not releases.
+- Six service workflows retain their existing direct-main service-change,
+  non-`VERSION` multi-arch `latest` path. Main `VERSION` changes validate rather
+  than automatically promote numbered tags. Service release promotion builds
+  and consumes the selected main SHA image in the explicit release run.
+- Social-agent main service/version CI retains its existing multi-arch `latest`
+  publication, but emits a numbered tag only for explicit platform release.
+  Thus development `latest` is not a numbered-release approval signal.
+- Docs Pages deployment remains automatic on its existing main triggers, separate
+  from platform release approval. No deployment/environment policy is changed.
+- Recorder remains independently versioned and tag-triggered by
+  `agent-recorder-v*`; platform dispatch does not release Recorder, CLI or Messenger.
 
 ## Hosting capabilities and settings
 
@@ -96,11 +151,14 @@ an exact owner-operated setting or missing capability rather than guessing that
 an inaccessible response means an empty configuration. Keep setting changes
 reversible and separate from final release acceptance.
 
-## Unresolved legacy Firewheel hosting
+## Legacy Firewheel (unmaintained)
 
-The advertised legacy Firewheel adapters remain supported consumers in this
-port's hosting inventory, not archival code or owner-approved exclusions. They
-consume older external dependencies, not the modern generated Compose chain:
+The owner has removed Firewheel from maintained v0.1 completion and hosting
+requirements. Leave its existing source/references unchanged, without a version
+hunt, replacement runtime/topology or legacy hosting work. Disable it only if a
+concrete recorded failure actually breaks maintained work, not preemptively.
+The following retained inventory is historical context, not an acceptance gate.
+These adapters consume older external dependencies, not the modern Compose chain:
 
 - `tests/network/firewheel/model-components/general-journal/INSTALL` clones
   `sandialabs/sync-services`, a different repository.
@@ -123,12 +181,9 @@ or a different network topology. Replacing these dependencies with the current
 monorepo runtime is a separate adaptation, not part of this correction. No such
 replacement, credential-policy change or topology change is made here.
 
-Like-for-like Plurality hosting and the stale integration inputs still need an
-explicit disposition before claiming complete Firewheel portability. No
-equivalent Plurality repository/image, image copying or compatibility has been
-established or authorized by this source port. The existing external references
-remain unchanged; they are not qualified Plurality artifacts or silently
-accepted hosting exceptions.
+No working legacy version or equivalent Plurality image is asserted. The owner
+has explicitly left these inputs unchanged and outside maintained hosting scope;
+no like-for-like Firewheel publication or portability claim is required.
 
 ## Existing database and rollback boundary
 

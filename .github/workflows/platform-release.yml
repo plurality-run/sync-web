@@ -1,0 +1,114 @@
+name: Platform Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Full main commit SHA selected for publication (must match this dispatch)'
+        required: true
+        type: string
+      version:
+        description: 'Platform VERSION at that commit, without a v prefix'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-release
+  cancel-in-progress: false
+
+jobs:
+  approve-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check explicit main source and version
+        env:
+          PLATFORM_RELEASE: 'true'
+          SELECTED_COMMIT: ${{ inputs.commit }}
+          SELECTED_VERSION: ${{ inputs.version }}
+        run: |
+          .github/scripts/check-platform-release.sh "$SELECTED_COMMIT" "$SELECTED_VERSION"
+          node scripts/sync-platform-package-versions.js
+
+  journal:
+    needs: approve-source
+    uses: ./.github/workflows/journal.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      release: true
+
+  ledger:
+    needs: approve-source
+    uses: ./.github/workflows/ledger.yml
+    permissions:
+      contents: write
+    with:
+      release: true
+
+  router:
+    needs: approve-source
+    uses: ./.github/workflows/services-router.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      release: true
+
+  gateway:
+    needs: approve-source
+    uses: ./.github/workflows/services-gateway.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      release: true
+
+  explorer:
+    needs: approve-source
+    uses: ./.github/workflows/services-explorer.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      release: true
+
+  workbench:
+    needs: approve-source
+    uses: ./.github/workflows/services-workbench.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      release: true
+
+  identity-provider:
+    needs: approve-source
+    uses: ./.github/workflows/services-identity-provider.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      release: true
+
+  file-system:
+    needs: approve-source
+    uses: ./.github/workflows/services-file-system.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      release: true
+
+  social-agent:
+    needs: approve-source
+    uses: ./.github/workflows/tests-social-agent.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      release: true

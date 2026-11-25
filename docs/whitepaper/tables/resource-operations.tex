@@ -1,0 +1,11 @@
+\begin{tabularx}{\textwidth}{@{}P{0.25\textwidth}P{0.285\textwidth}X@{}}
+\toprule
+\textbf{Purpose} & \textbf{Operations} & \textbf{Architectural Boundary} \\
+\midrule
+Store and copy & \texttt{put!}, \texttt{put-batch!}, \texttt{copy!}, \texttt{copy-batch!} & Change staged state, including deletion. Copy reads sources from one pre-mutation snapshot. \\
+Exercise current objects & \texttt{use!}, \texttt{use-batch!} & Invoke objects, persisting successors atomically or discarding them in read-only mode. \\
+Compose live operations & \texttt{run!} & Execute a stored program through a caller-bound journal capability. Nested calls keep their own authorization and mutation boundaries; the whole program is not atomic. \\
+Retrieve historical evidence & \texttt{retrieve}, \texttt{retrieve-batch} & Read selected committed state or compute an object result from that state, verifying returned evidence without persisting successors. \\
+Retain or release evidence & \texttt{pin!}, \texttt{pin-batch!}, \texttt{unpin!}, \texttt{unpin-batch!}, \texttt{prune!}, \texttt{prune-batch!}, \texttt{truncate!} & Change local retention without changing the selected historical commitments; authority and protected-path constraints remain local. Administrator-only truncation releases history through an index while preserving chain identity and numbering. \\
+\bottomrule
+\end{tabularx}

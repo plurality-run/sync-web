@@ -1,7 +1,10 @@
-\documentclass[11pt]{article}
-
-\usepackage[T1]{fontenc}
-\usepackage[margin=1in]{geometry}
+\makeatletter
+\def\input@path{{./style/}}
+\makeatother
+\documentclass[11pt,justified,relaxed]{SANDreport}
+\ifdefined\pdfmapfile
+  \pdfmapfile{+newtx.map}
+\fi
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{eso-pic}
@@ -12,36 +15,58 @@
 \usepackage{tabularx}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
+% Algorithms: 10pt sans-serif with smaller line numbers and no paragraph spacing.
+\algrenewcommand\alglinenumber[1]{\scriptsize #1:}
+\AtBeginEnvironment{algorithmic}{\small\sffamily\setlength{\parskip}{0pt}}
+\AtBeginEnvironment{tabularx}{\sffamily}
+\renewcommand{\tabularxcolumn}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
 \usepackage{hyperref}
-\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage[nameinlink,noabbrev,capitalise]{cleveref}
 \usepackage{enumitem}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta,backgrounds,calc,fit,matrix,positioning,shapes.multipart}
-\usepackage[underline=false,rounded corners=true]{pgf-umlsd}
-\input{figures/styles}
-\hypersetup{colorlinks=true,linkcolor=swblue,citecolor=swblue,urlcolor=swblue}
+\definecolor{swblue}{HTML}{0076A8}
+\definecolor{swtermlink}{HTML}{4F6773}
+\newcommand{\glslink}[2]{\begingroup\hypersetup{linkcolor=swtermlink}\hyperlink{gls:#1}{#2}\endgroup}
+\newcommand{\glossaryentry}[2]{\item[\hypertarget{gls:#1}{#2}]}
 
-\AddToShipoutPictureBG{%
-  \AtPageCenter{%
-    \makebox[0pt]{\rotatebox{45}{%
-      \textcolor{black!7}{\fontsize{92}{92}\selectfont\bfseries DRAFT}}}}%
+
+\hypersetup{
+  bookmarks=true,         % show bookmarks bar?
+  unicode=false,          % non-Latin characters in Acrobat's bookmarks
+  pdftoolbar=true,        % show Acrobat's toolbar?
+  pdfmenubar=true,        % show Acrobat's menu?
+  pdffitwindow=false,     % window fit to page when opened
+  %    pdfstartview={FitW},    % fits the width of the page to the window
+  pdftitle={The Synchronic Web: Version 2},    % title
+  pdfauthor={Thien-Nam Dinh, Nicholas Pattengale, Mitch Negus},     % author
+  pdfsubject={synchronic web},   % subject of the document
+  pdfcreator={LaTeX with hyperref},   % creator of the document
+  pdfproducer={},  % producer of the document
+  pdfkeywords={synchronic web, verifiable data structures, decentralized web}, % list of keywords
+  pdfnewwindow=true,      % links in new window
+  colorlinks=true,
+  citecolor=swblue,
+  linkcolor=swblue,
+  urlcolor=swblue,
 }
 
-\title{The Synchronic Web}
-\author{%
-  Thien-Nam Dinh\\
-  \textit{Sandia National Labs}\\
-  \href{mailto:thidinh@sandia.gov}{\texttt{thidinh@sandia.gov}}
-  \and
-  Nicholas Pattengale\\
-  \textit{Sandia National Labs}\\
-  \href{mailto:ndpatte@sandia.gov}{\texttt{ndpatte@sandia.gov}}
-  \and
-  Mitch Negus\\
-  \textit{Sandia National Labs}\\
-  \href{mailto:mnegus@sandia.gov}{\texttt{mnegus@sandia.gov}}%
+\title{The Synchronic Web: Version 2}
+
+\author{
+  \begin{tabular*}{\textwidth}{l @{\extracolsep{\fill}} l l}
+    Thien-Nam Dinh & Nicholas Pattengale & Mitch Negus\\
+    \textit{Sandia National Labs} & \textit{Sandia National Labs} & \textit{Sandia National Labs}\\
+	\href{mailto:thidinh@sandia.gov}{thidinh@sandia.gov} & \href{mailto:ndpatte@sandia.gov}{ndpatte@sandia.gov} & \href{mailto:mnegus@sandia.gov}{mnegus@sandia.gov}\\
+  \end{tabular*}
 }
+
 \date{}
+
+\SANDprintDate{\vfill\color{gray} October 2026}
+% TODO: replace with the SAND number assigned at review and approval.
+\SANDnum{\color{gray} SAND-XXXX}
+\SANDauthor{Thien-Nam Dinh, Nicholas Pattengale, Mitch Negus}
+\SANDmarkReleaseUUR
 
 \begin{document}
 \maketitle
@@ -66,8 +91,6 @@
 \input{sections/08-assessment}
 \input{sections/glossary}
 
-\phantomsection
-\addcontentsline{toc}{section}{References}
 \bibliographystyle{plain}
 \bibliography{references}
 \end{document}

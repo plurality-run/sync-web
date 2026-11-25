@@ -2,93 +2,80 @@
 \label{sec:glossary}
 \addcontentsline{toc}{section}{Glossary}
 
-Reference definitions for recurring terms introduced throughout the paper.
-
 \begin{description}[style=nextline]
-  \item[Authentication]
-    Verification of an asserted identity, origin, or authority through evidence such as credentials and signatures. Merkle integrity supplies the complementary structural check against a commitment.
+  \glossaryentry{authentication}{Authentication}
+    Verification of an asserted identity, origin, or authority through evidence such as credentials and signatures. Structural integrity supplies the complementary structural check against a commitment.
 
-  \item[Authorization]
-    A policy decision determining whether a principal may perform an operation. In current federation, terminal-local rules grant authenticated remote principals independent path-scoped \texttt{put!}, qualified \texttt{use!}, \texttt{run!}, and \texttt{retrieve} permissions. Namespace ownership and read-only \texttt{use!} do not imply \texttt{run!}; Root and configured Interface administrators remain local principals with default authority.
+  \glossaryentry{authorization}{Authorization}
+    A policy decision determining whether a principal may perform an operation. Rules local to the receiving journal grant principals path-scoped permissions for each class of operation, so authority over a resource is always decided by the journal that holds the resource.
 
-  \item[Bridge]
-    A reciprocal signed-head-retention relationship through which each journal preserves a verified head for the other. Reciprocity provides identity and history reachability, while terminal policy independently grants application-data authority.
+  \glossaryentry{bridge}{Bridge}
+    A reciprocal signed-head-retention relationship through which each journal preserves verified history for the other under a receiver-local alias and accepted signing key. Reciprocity supports authenticated history reachability, while the receiving journal's policy independently grants application-data authority.
 
-  \item[Digest]
+  \glossaryentry{digest}{Digest}
     A cryptographic hash derived from a node or larger structure and used as its integrity identifier.
 
-  \item[Historical cursor]
-    The independently selected origin and per-hop indexes used only by \texttt{retrieve}. A canonical public journal-relative path interleaves these indexes with directional aliases; the Interface separates that path into the current route used for authentication and endpoint context and the historical cursor used to select committed content.
+  \glossaryentry{entanglement}{Entanglement}
+    Cross-history ordering created when one journal includes another's committed head in its own later state.
 
-  \item[History]
-    Used in its ordinary broad sense for prior states and changes. Concrete chains, heads, and receipts represent history using ordinary Synchronic Web structures.
+  \glossaryentry{head}{Head}
+    The signed committed state of a journal at one index. A step forms it by binding application state, descriptors, retained remote heads, and any authorized key transition into the journal's chain and signing the result. Bridges retain heads from other journals, and including a remote head in a later step creates entanglement.
 
-  \item[Integrity]
+  \glossaryentry{index}{Index}
+    A position in one journal's committed history, assigned by each step and increasing from zero. Negative indexes count back from the latest committed step, so $-1$ selects the latest. In a journal-relative path, an index at each hop selects the historical state of that journal. Indexes are local to one journal's history and are not comparable across journals except through inclusion.
+
+  \glossaryentry{integrity}{Integrity}
     The property that modification can be detected relative to a known commitment. Authentication and authorization supply the associated claims about identity, origin, and authority.
 
-  \item[Journal]
-    The software an entity runs together with all data persisted on it. A journal supplies the root from which that entity views the Synchronic Web and is analogous to a site or origin on the conventional Web.
+  \glossaryentry{journal}{Journal}
+    The software an entity runs, together with all data that software persists. A journal supplies the root from which that entity views the Synchronic Web and is analogous to a site or origin on the conventional Web.
 
-  \item[Journal signing-key continuity]
-    A receiver-local chain from an accepted signing key through predecessor-authorized transitions in committed heads. Journals are infrastructure rather than durable principals; bridge aliases name authorization relationships locally.
-
-  \item[Key-index]
-    The terminal-local history index whose committed bridge state authenticated a remote interface key. Authorization may constrain this index relative to the terminal's current history.
-
-  \item[Merge]
+  \glossaryentry{merge}{Merge}
     To combine compatible partial structures whose integrity relationships agree.
 
-  \item[Node]
-    A generic term whose meaning follows from context. It may denote a node in the integrity-verifiable data-structure DAG or an entity in the graph of journals and relationships.
+  \glossaryentry{node}{Node}
+    An element of the integrity-verifiable data-structure DAG: a branch, leaf, stump, or null.
 
-  \item[Object]
-    A durable structure that couples executable behavior with state. Its documented protocol determines how the state is read, transformed, and represented; its internal layout remains implementation-specific.
+  \glossaryentry{object}{Object}
+    A stored structure that couples executable behavior with state. Its documented protocol determines how the state is read, transformed, and represented, while its internal layout remains implementation-specific.
 
-  \item[Origin-local pin]
-    Retention of verified remote proof material in the originating journal under the full origin-relative historical path. It follows a federated \texttt{retrieve} and mutates the origin's retention state.
+  \glossaryentry{path}{Path}
+    A sequence interpreted from a selected journal root to address a resource or intermediate structure. A canonical federated path interleaves historical indexes with directional bridge aliases before the destination's namespace and local path. Like a relative URL, its meaning is completed by a starting root.
 
-  \item[Path]
-    A sequence interpreted from a selected journal root to address a resource or intermediate structure. A canonical federated path interleaves optional historical indexes with directional aliases before the terminal namespace and local path. Like a relative URL, its meaning is completed by a starting root.
+  \glossaryentry{pin}{Pin}
+    To merge a chosen slice into the evidence a journal permanently retains for a historical head, creating a local retention obligation that survives the recent-history window. Unpinning releases that obligation, and neither operation changes the committed state.
 
-  \item[Prune]
+  \glossaryentry{principal}{Principal}
+    The receiver-relative identity, expressed as a path, to which authorization rules apply. Local users and administrators have local principals, while a remote caller's principal is formed from the authenticating route: the bridge aliases leading back to the origin, optionally followed by the origin's user identifier.
+
+  \glossaryentry{prune}{Prune}
     To remove retained material while preserving the integrity relationships needed to identify the larger structure.
 
-  \item[Record]
+  \glossaryentry{record}{Record}
     Any snippet of data stored on a journal or transmitted between journals. The term is intentionally fluid across object shapes, historical entries, and storage units.
 
-  \item[Resource]
+  \glossaryentry{resource}{Resource}
     A path-addressed value or object in a journal-relative view. Its low-level representation may be a leaf or a larger self-encoding structure.
 
-  \item[Root]
-    A distinguished reference from which persisted structure is reached and interpreted. Unless otherwise qualified, a journal root is also the starting point for paths in that journal's view.
+  \glossaryentry{route}{Route}
+    The journal-to-journal portion of a federated path: the sequence of directional bridge aliases, each with its historical index, that leads from the origin to the destination journal. Each hop follows the exact journal object committed beneath the previous one, so a route also determines the keys and endpoints used for authentication, and the route that authenticated a remote caller forms its principal.
 
-  \item[Root commitment]
-    A digest or integrity reference accepted as the fixed point against which a structure is verified. Additional evidence is required to establish who created, supplied, or endorsed it.
+  \glossaryentry{self-encoding}{Self-encoding}
+    The property of structure that carries the definition used to interpret it within the same commitment as its state. A self-encoding object's behavior and data can therefore be sliced, retained, cited, and verified together.
 
-  \item[Slice]
-    A proof-preserving partial structure retaining the material required for selected paths while replacing unrelated material with stubs.
+  \glossaryentry{slice}{Slice}
+    A proof-preserving partial structure retaining the material required for selected paths while replacing unrelated material with stumps.
 
-  \item[State]
-    Used in its ordinary broad sense for the condition or contents of a system, structure, object, or resource at a relevant point or context.
-
-  \item[Step]
+  \glossaryentry{step}{Step}
     A discrete journal transition that turns staged changes into a new historically resolvable state.
 
-  \item[Stub]
-    A representation that retains the digest of unavailable, undisclosed, or intentionally pruned structure while omitting its contents. A stub represents unknown structure; null represents empty structure.
+  \glossaryentry{stump}{Stump}
+    A representation that retains the digest of unavailable, undisclosed, or intentionally pruned structure while omitting its contents. A stump represents unknown structure, whereas null represents empty structure.
 
-  \item[Stump]
-    The low-level persisted node form used to represent a stub. It stores a retained logical digest under a distinct local node handle.
+  \glossaryentry{successor}{Successor}
+    A state or head that follows an earlier one in a history. Evaluation or staged changes may propose a candidate successor, and a committed step makes it historically resolvable while its predecessor remains identifiable by digest.
 
-  \item[Synchronic Web]
+  \glossaryentry{synchronic-web}{Synchronic Web}
     The network, data structure, computational medium, and protocol family formed when independently rooted journals make resources and histories reachable through journal-relative paths and bridges.
 
-  \item[Terminal journal]
-    The journal that directly receives and authorizes a federated application invocation after the origin follows a working route to its committed endpoint and authentication object.
-
-  \item[Working route]
-    The ordered receiver-local directional aliases used from the origin's latest committed view to select the terminal authentication object, endpoint, and reverse path to the origin key. Its implicit indexes are current; \texttt{retrieve} may select historical content independently.
-
-  \item[Entanglement]
-    Cross-history ordering created when one journal incorporates another's committed head into its own later state. The term follows Maniatis and Baker's secure-history protocol~\cite{Maniatis2002timeline}.
 \end{description}

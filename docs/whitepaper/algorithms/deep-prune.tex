@@ -2,17 +2,17 @@
 \caption{Deep Prune Along Object Path}
 \label{alg:deep-prune}
 \begin{algorithmic}[1]
-\Require Object node $x$ and nonempty path $p$
+\Require Object $x$ implementing digest-preserving prune/set protocols; nonempty path $p$ (may cross stumps)
 \Ensure Evidence at the selected path is removed while the logical digest remains fixed
 \Function{DeepPrune}{$x,p$}
-  \State $o \gets \Call{EvaluateObject}{x}$
+  \State $o \gets \texttt{sync-eval}(x)$
   \State $k \gets \Call{First}{p}$
   \If{$|p| = 1$}
-    \State $o.\Call{Prune}{k}$
+    \State $o.\texttt{prune!}(k)$
     \State \Return $\Call{Node}{o}$
   \EndIf
-  \State $c \gets o.\Call{Get}{k}$
-  \If{$c$ is not an available pair node}
+  \State $c \gets o.\texttt{get}(k)$
+  \If{$c$ is not an available branch}
     \State \Return $\Call{Node}{o}$
   \EndIf
   \State $d \gets \Call{Digest}{c}$
@@ -21,10 +21,10 @@
   \If{$\Call{Digest}{c'} \ne d$}
     \State \Call{Fail}{``prune changed child digest''}
   \EndIf
-  \If{$c'$ is a stub}
-    \State $o.\Call{Prune}{k}$
+  \If{$c'$ is a stump}
+    \State $o.\texttt{prune!}(k)$
   \Else
-    \State $o.\Call{Set}{k,c'}$
+    \State $o.\texttt{set!}(k,c')$
   \EndIf
   \State \Return $\Call{Node}{o}$
 \EndFunction

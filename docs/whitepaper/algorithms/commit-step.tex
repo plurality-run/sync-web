@@ -1,54 +1,27 @@
 \begin{algorithm}[htbp]
 \caption{Commit Journal Step}
 \label{alg:commit-step}
-\footnotesize
 \begin{algorithmic}[1]
-\Require Ledger $L$, Unix time $t$, signing public key $p_k$, signing secret key $s_k$
-\Ensure Either no step is needed or a signed step is appended and retention is updated
-\Function{CommitStep}{$L,t,p_k,s_k$}
-  \Statex \Comment{Comparable state omits transition and cryptographic metadata.}
-  \State $(S,P,T) \gets \Call{EvaluateLedgerFields}{L}$
-  \State $r \gets \Call{PendingKeyTransition}{L}$
-  \State $k_0 \gets \Call{AcceptedSigningKey}{L}$
-  \State $\mathit{rotate} \gets (p_k \ne k_0)$
-  \If{$\mathit{rotate}$}
-    \State $\Call{VerifyAuthorizedTransition}{L,r,k_0,p_k,\lvert P\rvert}$
-  \ElsIf{$r$ is present}
-    \State \Call{Fail}{``pending transition does not match signing key''}
+\Require Journal $J$, prepared time $t$, signing key pair $(p_k,s_k)$
+\Ensure If state changed or a key transition is pending, a signed successor extends history and local retention is updated
+\Function{CommitStep}{$J,t,p_k,s_k$}
+  \State $(S,P,T) \gets \Call{JournalViews}{J}$ \Comment{Stage, permanent history, recent history.}
+  \State $r \gets \Call{PendingKeyTransition}{J}$
+  \State \Call{ValidateSigningContinuity}{$J,p_k,r$}
+  \If{staged state is unchanged and no key transition is pending}
+    \State \Return \Call{Size}{$P$}
   \EndIf
-  \State $d_{cur} \gets \Call{ComparableStateDigest}{S}$
-  \If{$\Call{Size}{P}=0$}
-    \State $d_{prev} \gets \Call{Digest}{\mathit{null}}$
-  \Else
-    \State $h \gets \Call{Get}{P,-1}$
-    \State $d_{prev} \gets \Call{ComparableStateDigest}{h}$
-  \EndIf
-  \If{$d_{cur}=d_{prev}$ and not $\mathit{rotate}$}
-    \State \Return $\Call{Size}{P}$
-  \EndIf
-  \State $u \gets \Call{UTC}{t}$
-  \State $S.\Call{RecordTransition}{[\texttt{*state*},\texttt{*time*}],u}$
-  \State $P.\Call{Push}{\operatorname{Node}(S)}$
-  \State $S.\Call{Delete}{\texttt{*transition*}}$
-  \State $H \gets P[-1]$
-  \State $H \gets \Call{EmbedHeadMetadata}{H,L.\mathit{identity},L.\mathit{name},L.\mathit{endpoint},L.\mathit{interfaceKey},r}$
-  \State $C \gets \Call{BlankSigningFields}{H}$ \Comment{Generic and journal-namespaced key/signature fields.}
-  \State $d_s \gets \Call{Digest}{C}$
-  \State $\sigma \gets \Call{Sign}{s_k,d_s}$
-  \State $P[-1] \gets \Call{FillSigningFields}{C,p_k,\sigma}$
-  \If{$\mathit{rotate}$}
-    \State \Call{CommitKeyTransition}{$L,r,p_k$}
-  \EndIf
-  \State $T.\Call{Push}{P[-1]}$
-  \State $q_t \gets \Call{DeepSlice}{\operatorname{Node}(T),\texttt{(-1 (*state* *time*))}}$
-  \If{$L.\mathit{window}$ is set and $\Call{Size}{T}>L.\mathit{window}$}
-    \State $T.\Call{Prune}{-(L.\mathit{window}+1)}$
-  \EndIf
-  \State $q_p \gets \Call{DeepPrune}{\operatorname{Node}(P),\texttt{(-1 (*state*))}}$
-  \State $L.\mathit{stage} \gets \operatorname{Node}(S)$
-  \State $L.\mathit{permanent} \gets \Call{MergePartial}{q_t,q_p}$
-  \State $L.\mathit{temporary} \gets \operatorname{Node}(T)$
-  \State \Return $\Call{Size}{P}$
+  \State $(S',H) \gets \Call{PrepareSuccessor}{S,t}$
+  \State $C \gets \Call{Append}{P,H}$
+  \State $C \gets \Call{BindDescriptorsAndKeyTransition}{C,J,r}$ \Comment{Written into the latest entry.}
+  \State $C \gets \Call{BlankLatestSigningFields}{C}$
+  \State $d \gets \Call{Digest}{\textproc{Node}(C)}$ \Comment{The enclosing chain is the signing object.}
+  \State $\sigma \gets \Call{Sign}{s_k,d}$
+  \State $P' \gets \Call{FillLatestSigningFields}{C,p_k,\sigma}$
+  \State $(P',T') \gets \Call{ApplyRetentionPolicy}{J,P',T}$
+  \Statex \Comment{Permanent: continuity, time, pins; recent: full state in window.}
+  \State \Call{InstallSuccessor}{$J,S',P',T',r$}
+  \State \Return \Call{Size}{$P'$}
 \EndFunction
 \end{algorithmic}
 \end{algorithm}

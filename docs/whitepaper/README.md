@@ -9,13 +9,14 @@ cd docs/whitepaper
 make
 ```
 
-The generated document is `whitepaper.pdf`. Build artifacts are ignored by the local `.gitignore`.
+The build requires `latexmk`, pdfLaTeX, and BibTeX. It generates `whitepaper.pdf`; generated build artifacts are ignored by the local `.gitignore`.
 
 ## Structure
 
-- `main.tex` — article setup and section order
+- `main.tex` — report setup and section order
 - `sections/` — independently editable section sources
-- `figures/` — TikZ figures and shared styles
+- `figures/` — editable draw.io diagrams and their PDF exports used in the build
+- `style/` — report class and required cover assets
 - `tables/` — table sources
 - `algorithms/` — algorithm sources
 - `references.bib` — bibliography

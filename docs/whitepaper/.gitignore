@@ -10,3 +10,8 @@
 *.out
 *.pdf
 *.toc
+!style/SANDrelaxed-bg.pdf
+!style/DOE_white_logo.pdf
+!style/NNSA_white_logo.pdf
+!figures/*.pdf
+*.bkp

@@ -1,14 +1,14 @@
-\begin{tabularx}{\textwidth}{@{}>{\ttfamily\raggedright\arraybackslash}p{0.17\textwidth}>{\ttfamily\raggedright\arraybackslash}p{0.35\textwidth}X@{}}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily\frenchspacing}P{0.125\textwidth}>{\ttfamily\frenchspacing}P{0.38\textwidth}X@{}}
 \toprule
 \normalfont\textbf{Operation} & \normalfont\textbf{Signature} & \textbf{Behavior} \\
 \midrule
 deep-get    & (deep-get object path) & Traverse nested public \texttt{get} methods and return the value at the path. \\
-deep-set!   & (deep-set! object path value) & Set the terminal value and rebuild each containing object. \\
+deep-set!   & (deep-set! object path value) & Set the terminal value and rebuild each ancestor. \\
 deep-slice! & (deep-slice! object path) & Retain evidence along the path while preserving the logical digest. \\
-deep-prune! & (deep-prune! object path) & Remove evidence along the path, rebuilding parents or replacing exhausted children with stubs. \\
-deep-merge! & (deep-merge! source target (path '())) & Merge digest-compatible evidence into the target or into the optional target path. \\
-deep-copy!  & (deep-copy! object source-path target-path) & Read a value from one nested path and set it at another. \\
-deep-call   & (deep-call object path callback) & Evaluate a callback against the selected object and return the callback result while leaving ancestors unchanged. \\
-deep-call!  & (deep-call! object path callback) & Evaluate once and return (result successor-node) with the complete rebuilt root. \\
+deep-prune! & (deep-prune! object path) & Remove path evidence, rebuilding parents or replacing exhausted children with stumps. \\
+deep-merge! & (deep-merge! source target path) & Merge digest-compatible evidence into the target or into the optional target path. \\
+deep-copy!  & (deep-copy! object source target) & Copy the value at one nested path to another. \\
+deep-call   & (deep-call object path callback) & Evaluate a callback against the selected object and return its result, leaving ancestors unchanged. \\
+deep-call!  & (deep-call! object path callback) & Evaluate once and return the result with the complete rebuilt root. \\
 \bottomrule
 \end{tabularx}

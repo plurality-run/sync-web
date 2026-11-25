@@ -4,7 +4,7 @@ LATEXMK ?= latexmk
 
 all: whitepaper.pdf
 
-whitepaper.pdf: main.tex references.bib sections/*.tex figures/*.tex tables/*.tex algorithms/*.tex
+whitepaper.pdf: main.tex references.bib sections/*.tex figures/*.pdf tables/*.tex algorithms/*.tex
 	$(LATEXMK) -pdf -interaction=nonstopmode -halt-on-error -jobname=whitepaper main.tex
 
 clean:

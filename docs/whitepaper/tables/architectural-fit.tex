@@ -1,13 +1,12 @@
-\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}X@{}}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
 \toprule
-\textbf{System} & \textbf{Suitable Situation} \\
+\textbf{System} & \textbf{Best Suited For} \\
 \midrule
-Ordinary database & One operator with efficient current-state queries. \\
-Signed documents & Complete immutable payloads from known publishers. \\
-Content-addressed store & Immutable retrieval by digest. \\
-Transparency log & Public accountability for one authority. \\
-CRDT & Replicas expected to converge on one application state. \\
-Global ledger & Participants sharing transaction order and consensus governance. \\
-Synchronic Web & Independent roots requiring selective possession, durable interpretation, historical correction, and cross-institutional evidence. \\
+Ordinary database & One operator querying current data efficiently. \\
+Content-addressed store & Anyone fetching unchanging data by its hash. \\
+Transparency log & One authority publicly accountable for its actions. \\
+Conflict-free replicated data type & Replicas that must converge on the same state. \\
+Global ledger & Participants agreeing on one shared transaction order. \\
+Synchronic Web & Independent operators sharing distributed computational state. \\
 \bottomrule
 \end{tabularx}

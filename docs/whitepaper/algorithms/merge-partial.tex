@@ -1,5 +1,5 @@
 \begin{algorithm}[htbp]
-\caption{Merge Compatible Partial Structures}
+\caption{Deep Merge of Compatible Structures}
 \label{alg:merge-partial}
 \begin{algorithmic}[1]
 \Require Partial structures $a$ and $b$
@@ -10,18 +10,18 @@
   \EndIf
   \If{$a$ is null}
     \State \Return $a$
-  \ElsIf{$a$ is a byte-vector leaf}
+  \ElsIf{$a$ is a leaf}
     \State \Return $a$
-  \ElsIf{$a$ is a stub}
+  \ElsIf{$a$ is a stump}
     \State \Return $b$
-  \ElsIf{$b$ is a stub}
+  \ElsIf{$b$ is a stump}
     \State \Return $a$
   \Else
     \State $a_L \gets \Call{Left}{a}$; $b_L \gets \Call{Left}{b}$
     \State $a_R \gets \Call{Right}{a}$; $b_R \gets \Call{Right}{b}$
     \State $l \gets \Call{MergePartial}{a_L,b_L}$
     \State $r \gets \Call{MergePartial}{a_R,b_R}$
-    \State \Return $\Call{Pair}{l,r}$
+    \State \Return $\Call{Branch}{l,r}$
   \EndIf
 \EndFunction
 \end{algorithmic}

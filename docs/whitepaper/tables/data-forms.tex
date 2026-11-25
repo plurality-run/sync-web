@@ -1,12 +1,12 @@
-\begin{tabularx}{\textwidth}{@{}p{0.18\textwidth}XX@{}}
+\begin{tabularx}{\textwidth}{@{}P{0.18\textwidth}XX@{}}
 \toprule
 \textbf{Aspect} & \textbf{Addressable Network Form} & \textbf{Query-Optimized Operational Form} \\
 \midrule
-Primary unit & Independently identified resource and relationship & Application record, row, object, index, or transaction \\
-Identity & Root-relative path plus resolved state commitment & Application key interpreted within one operational system \\
+Primary unit & Resources and relationships, each independently identified & Record, row, object, index, or transaction \\
+Identity & Root-relative path plus the commitment of the resolved state & Application key interpreted within one operational system \\
 Strengths & Linking, citation, selective transfer, plural ownership, and historical reference & Locality, transactions, compression, indexing, and efficient bounded queries \\
-History & Durable resource states and cross-history relationships are first-class & Commonly application-defined, compacted, or maintained in separate logs \\
+History & Resource states and cross-history relationships are first-class & Commonly application-defined, compacted, or maintained in separate logs \\
 Typical costs & Traversal, synchronization, repeated metadata, and derived indexing & Provider dependence, schema coupling, and application-specific portability \\
-Architectural role & Shared network projection and durable evidence & Load-bearing operations and rebuildable derived views \\
+Architectural role & Shared network projection and retained historical evidence & System of record and rebuildable derived views \\
 \bottomrule
 \end{tabularx}

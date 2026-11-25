@@ -2,24 +2,24 @@
 \caption{Deep Slice Along Object Path}
 \label{alg:deep-slice}
 \begin{algorithmic}[1]
-\Require Object node $x$ and nonempty path $p$
-\Ensure The selected path remains available and the logical digest is unchanged
+\Require Object $x$ implementing digest-preserving slice/set protocols; nonempty available path $p$
+\Ensure The selected path remains available and the logical digest remains fixed
 \Function{DeepSlice}{$x,p$}
-  \State $o \gets \Call{EvaluateObject}{x}$
+  \State $o \gets \texttt{sync-eval}(x)$
   \State $k \gets \Call{First}{p}$
   \If{$|p| = 1$}
-    \State $o.\Call{Slice}{k}$
+    \State $o.\texttt{slice!}(k)$
     \State \Return $\Call{Node}{o}$
   \EndIf
-  \State $c \gets o.\Call{Get}{k}$
+  \State $c \gets o.\texttt{get}(k)$
   \State $d \gets \Call{Digest}{c}$
   \State $q \gets \Call{Rest}{p}$
   \State $c' \gets \Call{DeepSlice}{c,q}$
   \If{$\Call{Digest}{c'} \ne d$}
     \State \Call{Fail}{``slice changed child digest''}
   \EndIf
-  \State $o.\Call{Set}{k,c'}$
-  \State $o.\Call{Slice}{k}$ \Comment{discard siblings not needed for $k$}
+  \State $o.\texttt{set!}(k,c')$
+  \State $o.\texttt{slice!}(k)$ \Comment{Discard siblings not needed for $k$.}
   \State \Return $\Call{Node}{o}$
 \EndFunction
 \end{algorithmic}
